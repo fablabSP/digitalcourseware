@@ -36,20 +36,7 @@ Each of the 3 platforms is a fully separate static site (separate `index.html`/l
 separate dashboard). In production each would point at the real Azure Functions API
 instead of `shared/data.js`.
 
-## Demo login emails
 
-| Role | Email | What you'll see |
-|---|---|---|
-| Lecturer | `s.tan@sp.edu.sg` | Sarah Tan (MAD) — a request pending approval (2nd change), one with 1 change used, one not submitted |
-| Lecturer | `r.kumar@sp.edu.sg` | Ravi Kumar (MAD) — module DM2045 tagged as legacy |
-| Lecturer | `j.lim@sp.edu.sg` | Jeremy Lim (SB) — modules in both FY2025 and FY2026, try the FY tabs |
-| Lecturer | `m.ong@sp.edu.sg` | Michelle Ong (SB) — freshly submitted request, no changes made |
-| Admin | `kwok_pui_fong@sp.edu.sg` | Kwok Pui Fong — full dashboard access |
-| Admin | `Kavery_Tamil_Selven_RAMASWAMY@sp.edu.sg` | Kavery Tamil Selven Ramaswamy — full dashboard access |
-| Admin | `LEM_Lei_Kin@sp.edu.sg` | Lem Lei Kin — full dashboard access |
-| Admin | `Jennifer_GAN@sp.edu.sg` | Jennifer Gan — full dashboard access |
-| Vendor | `contact@pearson.com` | Pearson SG — placeholder uploads screen |
-| (any other email) | — | Login rejected, to demonstrate the "not on the list" behaviour |
 
 ## What's actually demonstrated here
 
