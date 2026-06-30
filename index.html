@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Digital Courseware Platform — Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/styles.css" />
+<style>
+  :root { --accent: #1c1d1f; --accent-soft: #ececec; --accent-text: #1c1d1f; }
+  .platform-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 28px; }
+  .platform-card { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 24px 22px; background: var(--surface); text-decoration: none; display: block; transition: transform 0.1s ease, box-shadow 0.1s ease; }
+  .platform-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+  .platform-icon { width: 44px; height: 44px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 19px; font-weight: 700; color: #fff; margin-bottom: 14px; }
+  @media (max-width: 760px) { .platform-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="main-content" style="max-width: 900px; padding-top: 60px;">
+  <p class="small muted" style="text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 8px;">Demo build</p>
+  <h1 style="font-size: 30px; margin-bottom: 10px;">Digital Courseware Platform</h1>
+  <p class="soft" style="max-width: 620px; line-height: 1.6;">
+    A coordination tool between lecturers, library admin, and book vendors for managing projected and verified digital courseware license counts each financial year (Apr&ndash;Apr). All data on this site is hardcoded for demonstration — nothing here is connected to a real database or email system.
+  </p>
+
+  <div class="platform-grid">
+    <a class="platform-card" href="lecturer/index.html">
+      <div class="platform-icon" style="background:#1d7a4c;">L</div>
+      <h3 style="font-size: 16px; margin-bottom: 4px;">Lecturer Portal</h3>
+      <p class="small soft">Submit and verify book license requests for your modules, by financial year.</p>
+    </a>
+    <a class="platform-card" href="admin/index.html">
+      <div class="platform-icon" style="background:#2b3a67;">A</div>
+      <h3 style="font-size: 16px; margin-bottom: 4px;">Admin Console</h3>
+      <p class="small soft">Review requests, manage the book catalogue, vendors, activation checks, and access.</p>
+    </a>
+    <a class="platform-card" href="vendor/index.html">
+      <div class="platform-icon" style="background:#9a5b00;">V</div>
+      <h3 style="font-size: 16px; margin-bottom: 4px;">Vendor Portal</h3>
+      <p class="small soft">Placeholder shell — upload catalogues and activation status.</p>
+    </a>
+  </div>
+
+  <div class="divider" style="margin-top: 36px;"></div>
+
+  <h3 style="font-size: 15px; margin-bottom: 10px;">Demo login emails</h3>
+  <table class="data-table">
+    <thead><tr><th>Role</th><th>Email</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Lecturer</td><td><code>s.tan@sp.edu.sg</code></td><td>Sarah Tan, MAD — has a request pending admin approval (2nd change)</td></tr>
+      <tr><td>Lecturer</td><td><code>r.kumar@sp.edu.sg</code></td><td>Ravi Kumar, MAD — module tagged as legacy</td></tr>
+      <tr><td>Lecturer</td><td><code>j.lim@sp.edu.sg</code></td><td>Jeremy Lim, SB — modules across FY2025 and FY2026</td></tr>
+      <tr><td>Lecturer</td><td><code>m.ong@sp.edu.sg</code></td><td>Michelle Ong, SB — freshly submitted, no changes yet</td></tr>
+      <tr><td>Admin</td><td><code>kwok_pui_fong@sp.edu.sg</code></td><td>Kwok Pui Fong — full dashboard access</td></tr>
+      <tr><td>Admin</td><td><code>Kavery_Tamil_Selven_RAMASWAMY@sp.edu.sg</code></td><td>Kavery Tamil Selven Ramaswamy — full dashboard access</td></tr>
+      <tr><td>Admin</td><td><code>LEM_Lei_Kin@sp.edu.sg</code></td><td>Lem Lei Kin — full dashboard access</td></tr>
+      <tr><td>Admin</td><td><code>Jennifer_GAN@sp.edu.sg</code></td><td>Jennifer Gan — full dashboard access</td></tr>
+      <tr><td>Vendor</td><td><code>contact@pearson.com</code></td><td>Pearson SG — has uploads in the placeholder shell</td></tr>
+    </tbody>
+  </table>
+
+  <div class="divider"></div>
+
+  <h3 style="font-size: 15px; margin-bottom: 10px;">What's new in this build</h3>
+  <table class="data-table">
+    <thead><tr><th>Feature</th><th>Where to try it</th></tr></thead>
+    <tbody>
+      <tr><td>Editable book catalogue with single-editor lock</td><td>Admin &rarr; Book catalogue tab &rarr; Edit a row, then try editing another row from a different "admin" to see the lock</td></tr>
+      <tr><td>Financial year tabs (Apr&ndash;Apr), admin-controlled</td><td>Top of both Admin and Lecturer dashboards</td></tr>
+      <tr><td>Legacy module tagging</td><td>Log in as <code>r.kumar@sp.edu.sg</code> — DM2045 is flagged legacy on both lecturer and admin views</td></tr>
+      <tr><td>Activation reconciliation (lecturer list vs vendor list, auto-matched by email)</td><td>Admin &rarr; Activation check tab</td></tr>
+      <tr><td>Costing tabulation, copyable approval email, PDF export</td><td>Admin &rarr; Lecturer requests tab &rarr; Costing &amp; submission</td></tr>
+      <tr><td>Admin user management (separate from lecturer/vendor access)</td><td>Admin &rarr; top right &rarr; Manage admins</td></tr>
+      <tr><td>SP schools (ABE, CLS, EEE, MAE, SMA, SB, SoC, MAD, LSC)</td><td>Used throughout module and book catalogue records</td></tr>
+      <tr><td>Upload vendor book list via fixed Excel template</td><td>Admin &rarr; Vendor list tab &rarr; "+ Upload vendor Excel"</td></tr>
+      <tr><td>Activation check now lists every book, showing whether lecturer and vendor have each uploaded</td><td>Admin &rarr; Activation check tab</td></tr>
+      <tr><td>Dedicated Modules tab, with legacy tagging</td><td>Admin &rarr; Modules tab</td></tr>
+      <tr><td>Lecturers can tag their own modules as legacy</td><td>Lecturer &rarr; any module card &rarr; "Tag as legacy" (notifies admin)</td></tr>
+      <tr><td>Procurement costing auto-calculates vendor price + 5%, admin can override per book</td><td>Admin &rarr; Costing &amp; submission &rarr; edit the "Final" column</td></tr>
+      <tr><td>Delete activation check reports</td><td>Admin &rarr; Activation check tab &rarr; Delete button on any report</td></tr>
+      <tr><td>Upload books directly to catalogue via CSV</td><td>Admin &rarr; Book catalogue tab &rarr; "+ Upload CSV"</td></tr>
+      <tr><td>All uploads CSV-only (Excel rejected client-side)</td><td>Any upload modal across the admin console</td></tr>
+      <tr><td>Original price shown before markup in costing</td><td>Admin &rarr; Costing &amp; submission</td></tr>
+      <tr><td>+5% as a checkbox, mutually exclusive with manual extra-licenses count</td><td>Admin &rarr; Costing &amp; submission &rarr; untick +5% to enable extra licenses</td></tr>
+    </tbody>
+  </table>
+
+  <div class="divider"></div>
+
+  <h3 style="font-size: 15px; margin-bottom: 10px;">The procurement flow this models</h3>
+  <p class="soft small" style="line-height: 1.7; max-width: 640px;">
+    Lecturer discusses needs with a vendor and shares the module code &rarr; vendor sends the curation team a pricelist and book details &rarr; curation team asks the lecturer to project license counts &rarr; library team costs it at the vendor's price plus a 5% markup on the projected amount &rarr; that costing goes up for procurement approval &rarr; books are purchased &rarr; three weeks later the lecturer confirms the final license count needed &rarr; both the vendor and the lecturer upload their respective verification lists, which the library team cross-checks for a final reconciliation.
+  </p>
+
+  <p class="footer-note">Built as a clickable mockup. See README.md in the repo for the technical spec this will become.</p>
+</div>
+
+</body>
+</html>

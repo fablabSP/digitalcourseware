@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Digital Courseware Platform — Lecturer Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css" />
+<style>
+  :root {
+    --accent: #1d7a4c;
+    --accent-soft: #d9efe2;
+    --accent-text: #1d7a4c;
+  }
+  .module-card { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 18px 20px; background: var(--surface); }
+  .module-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+  .book-row { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 13px 15px; margin-top: 10px; }
+  .book-row-head { display: flex; justify-content: space-between; align-items: flex-start; }
+  .book-row-foot { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; }
+</style>
+</head>
+<body>
+
+<div class="demo-banner">
+  <b>Demo mode</b> — all data is hardcoded and resets if you clear browser storage. <button class="ghost" style="font-size:11.5px; padding: 2px 8px; margin-left: 6px;" onclick="resetDemoData()">Reset demo data</button>
+</div>
+
+<div class="app-shell">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="brand-mark">B</div>
+      <div class="brand-text">
+        <div class="title">Digital Courseware Platform</div>
+        <div class="subtitle">Lecturer Portal</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip">
+        <div class="avatar-circle" id="avatarInitials">ST</div>
+        <span id="userName">Sarah Tan</span>
+      </div>
+      <button class="ghost" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="flex-between" style="margin-bottom: 10px;">
+      <div>
+        <h1 style="font-size: 21px;">Your modules</h1>
+        <p class="soft small" id="schoolLine">School of Design · FY2026</p>
+      </div>
+      <div class="flex-row gap-8">
+        <button onclick="openAddModuleModal()"><span style="margin-right:5px;">+</span>Add module</button>
+        <button onclick="downloadSampleCSV()"><span style="margin-right:5px;">&#8595;</span>Sample CSV</button>
+        <button onclick="openLogModal()"><span style="margin-right:5px;">&#8801;</span>My change log</button>
+      </div>
+    </div>
+
+    <div class="tab-row" id="fyTabRow" style="margin-bottom: 18px;"></div>
+
+    <div id="modulesContainer" class="stack"></div>
+
+    <div class="footer-note">
+      Need to add a lecturer, or think your module list is wrong? Contact your library admin — this list is refreshed each semester from the academic records system.
+    </div>
+  </div>
+</div>
+
+<!-- Edit / submit modal -->
+<div class="modal-backdrop" id="editModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <h2 style="font-size: 17px;" id="editModalTitle">Submit projected licenses</h2>
+        <p class="small soft" id="editModalSubtitle" style="margin-top: 2px;"></p>
+      </div>
+      <button class="modal-close" onclick="closeEditModal()">&times;</button>
+    </div>
+
+    <div id="editModalWarning" style="display:none; background: var(--warning-bg); color: var(--warning); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; margin-bottom: 14px;"></div>
+
+    <label class="field-label">Projected number of licenses</label>
+    <input type="number" id="editLicenseInput" min="0" placeholder="e.g. 30" />
+
+    <div style="margin-top: 14px;">
+      <label class="field-label">Note (optional)</label>
+      <textarea id="editNote" rows="2" placeholder="Reason for this change, if helpful for admin"></textarea>
+    </div>
+
+    <div class="flex-row gap-8" style="margin-top: 18px; justify-content: flex-end;">
+      <button class="ghost" onclick="closeEditModal()">Cancel</button>
+      <button class="primary" id="editModalSubmitBtn" onclick="submitEditModal()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add book modal -->
+<div class="modal-backdrop" id="addBookModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <h2 style="font-size: 17px;">Add a book</h2>
+        <p class="small soft" id="addBookModalSubtitle" style="margin-top: 2px;"></p>
+      </div>
+      <button class="modal-close" onclick="closeAddBookModal()">&times;</button>
+    </div>
+
+    <p class="small soft" style="margin-bottom: 14px;">Add another book title to this module so you can submit a projected license count for it, separately from your other books on this module.</p>
+
+    <label class="field-label">Book title</label>
+    <input type="text" id="addBookTitle" placeholder="e.g. Introduction to Materials Science" />
+
+    <div style="margin-top: 14px;">
+      <label class="field-label">Author</label>
+      <input type="text" id="addBookAuthor" placeholder="e.g. K. Wong" />
+    </div>
+
+    <div style="margin-top: 14px;">
+      <label class="field-label">Edition (optional)</label>
+      <input type="text" id="addBookEdition" placeholder="e.g. 3rd ed." />
+    </div>
+
+    <p class="field-error" id="addBookErr">Enter at least a title before adding this book.</p>
+
+    <div class="flex-row gap-8" style="margin-top: 18px; justify-content: flex-end;">
+      <button class="ghost" onclick="closeAddBookModal()">Cancel</button>
+      <button class="primary" onclick="submitAddBook()">Add book</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add module modal -->
+<div class="modal-backdrop" id="addModuleModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <h2 style="font-size: 17px;">Add a module</h2>
+        <p class="small soft" id="addModuleModalSubtitle" style="margin-top: 2px;"></p>
+      </div>
+      <button class="modal-close" onclick="closeAddModuleModal()">&times;</button>
+    </div>
+
+    <p class="small soft" style="margin-bottom: 14px;">Use this if a module you're teaching isn't showing up on your list yet. It'll appear right away — no admin approval needed.</p>
+
+    <label class="field-label">Module code</label>
+    <input type="text" id="addModuleCode" placeholder="e.g. DM2150" />
+
+    <div style="margin-top: 14px;">
+      <label class="field-label">Module name</label>
+      <input type="text" id="addModuleName" placeholder="e.g. Advanced Prototyping" />
+    </div>
+
+    <div style="margin-top: 14px;">
+      <label class="field-label">Semester</label>
+      <select id="addModuleSemester">
+        <option value="Sem 1">Sem 1</option>
+        <option value="Sem 2">Sem 2</option>
+      </select>
+    </div>
+
+    <div style="margin-top: 14px;">
+      <label class="field-label">School</label>
+      <input type="text" id="addModuleSchool" disabled />
+    </div>
+
+    <div style="margin-top: 14px;">
+      <label class="field-label">Financial year</label>
+      <input type="text" id="addModuleFY" disabled />
+    </div>
+
+    <p class="field-error" id="addModuleErr">Enter both a module code and module name.</p>
+
+    <div class="flex-row gap-8" style="margin-top: 18px; justify-content: flex-end;">
+      <button class="ghost" onclick="closeAddModuleModal()">Cancel</button>
+      <button class="primary" onclick="submitAddModule()">Add module</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change log modal -->
+<div class="modal-backdrop" id="logModal">
+  <div class="modal-box" style="max-width: 640px;">
+    <div class="modal-header">
+      <h2 style="font-size: 17px;">My change log</h2>
+      <button class="modal-close" onclick="closeLogModal()">&times;</button>
+    </div>
+    <p class="small soft" style="margin-bottom: 14px;">Critical actions only — submissions, changes, and verifications across all your modules.</p>
+    <div id="logModalBody" style="max-height: 50vh; overflow-y: auto;"></div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="../shared/data.js"></script>
+<script>
+const currentEmail = sessionStorage.getItem('currentLecturer');
+if (!currentEmail) window.location.href = 'index.html';
+
+const user = findUserByEmail(currentEmail);
+let activeRequestId = null;
+let activeFY = DB.settings.currentAcademicYear;
+
+function logout() {
+  sessionStorage.removeItem('currentLecturer');
+  window.location.href = 'index.html';
+}
+
+function initials(name) {
+  return name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function renderFYTabs() {
+  const row = document.getElementById('fyTabRow');
+  // only show FYs where this lecturer actually has modules, so the tab list isn't noisy
+  const fysWithModules = FINANCIAL_YEARS.filter(fy => getModulesForLecturer(currentEmail, fy).length > 0);
+  row.innerHTML = fysWithModules.map(fy => `
+    <button class="tab-btn ${fy === activeFY ? 'active' : ''}" onclick="switchFY('${fy}')">${fy}${fy === DB.settings.currentAcademicYear ? ' (current)' : ''}</button>
+  `).join('');
+}
+
+function switchFY(fy) {
+  activeFY = fy;
+  renderFYTabs();
+  renderModules();
+}
+
+function statusInfo(status) {
+  switch (status) {
+    case 'not_submitted': return { label: 'Not submitted', cls: 'pill-danger' };
+    case 'submitted': return { label: 'Submitted', cls: 'pill-info' };
+    case 'one_change_used': return { label: '1 change used', cls: 'pill-info' };
+    case 'pending_approval': return { label: 'Pending approval', cls: 'pill-warning' };
+    case 'verified': return { label: 'Verified', cls: 'pill-success' };
+    case 'rejected': return { label: 'Last change rejected', cls: 'pill-danger' };
+    default: return { label: status, cls: 'pill-neutral' };
+  }
+}
+
+function renderModules() {
+  document.getElementById('userName').textContent = user.name;
+  document.getElementById('avatarInitials').textContent = initials(user.name);
+  document.getElementById('schoolLine').textContent = `${user.school} · ${activeFY}`;
+
+  const modules = getModulesForLecturer(currentEmail, activeFY);
+  const container = document.getElementById('modulesContainer');
+  container.innerHTML = '';
+
+  if (modules.length === 0) {
+    container.innerHTML = `<div class="empty-state"><h3>No modules in ${activeFY}</h3><p>Your modules will appear here once the admin adds you to that year's list.</p></div>`;
+    return;
+  }
+
+  modules.forEach(mod => {
+    const requests = getRequestsForModule(mod.id);
+    const card = document.createElement('div');
+    card.className = 'module-card';
+
+    let booksHTML = '';
+    requests.forEach(req => {
+      const info = statusInfo(req.status);
+      let actionHTML = '';
+      let valueLineHTML = '';
+
+      if (req.status === 'not_submitted') {
+        valueLineHTML = `<p class="small muted">No projected licenses submitted yet</p>`;
+        actionHTML = `<button class="success-btn" onclick="openEditModal('${req.id}', 'submit')">Submit</button>`;
+      } else if (req.status === 'pending_approval') {
+        valueLineHTML = `<p class="small muted">Licenses hidden while change is under review</p>`;
+        actionHTML = `<button disabled>Edit locked</button>`;
+      } else if (req.status === 'verified') {
+        valueLineHTML = `<p class="small">Verified licenses: <b>${req.verifiedLicenses}</b></p>`;
+        actionHTML = `<button disabled>Verification complete</button>`;
+      } else if (req.status === 'one_change_used') {
+        valueLineHTML = `<p class="small">Projected licenses: <b>${req.projectedLicenses}</b></p>`;
+        actionHTML = `<button onclick="openEditModal('${req.id}', 'final')">Edit (final change)</button>`;
+      } else {
+        valueLineHTML = `<p class="small">Projected licenses: <b>${req.projectedLicenses}</b></p>`;
+        actionHTML = `<button onclick="openEditModal('${req.id}', 'first')">Edit</button>`;
+      }
+
+      booksHTML += `
+        <div class="book-row">
+          <div class="book-row-head">
+            <div>
+              <p style="font-weight:600; font-size:14px;">${req.bookTitle}</p>
+              <p class="small muted" style="margin-top:2px;">${req.author}, ${req.edition}</p>
+            </div>
+            <span class="pill ${info.cls}">${info.label}</span>
+          </div>
+          <div class="book-row-foot">
+            ${valueLineHTML}
+            ${actionHTML}
+          </div>
+        </div>`;
+    });
+
+    card.innerHTML = `
+      <div class="module-head">
+        <div>
+          <p style="font-weight:700; font-size:15px;">${mod.moduleCode} — ${mod.moduleName} ${mod.isLegacy ? '<span class="pill pill-neutral" title="' + mod.legacyNote + '">Legacy module</span>' : ''}</p>
+          <p class="small muted" style="margin-top:2px;">${mod.semester}, ${mod.academicYear} · ${requests.length} book${requests.length !== 1 ? 's' : ''} on this module</p>
+          ${mod.isLegacy ? `<p class="small" style="color: var(--ink-mute); margin-top:2px;">${mod.legacyNote}</p>` : ''}
+        </div>
+        <div class="flex-row gap-8">
+          <button class="ghost" style="font-size:12.5px;" onclick="addBookPrompt('${mod.id}')">+ Add book</button>
+          ${mod.isLegacy
+            ? `<button class="ghost" style="font-size:12.5px;" onclick="unflagModuleLegacy('${mod.id}')">Unflag legacy</button>`
+            : `<button class="ghost" style="font-size:12.5px;" onclick="flagModuleLegacy('${mod.id}')">Tag as legacy</button>`}
+        </div>
+      </div>
+      ${booksHTML}
+    `;
+    container.appendChild(card);
+  });
+}
+
+let activeAddBookModuleId = null;
+
+function addBookPrompt(moduleId) {
+  activeAddBookModuleId = moduleId;
+  const mod = getModuleById(moduleId);
+  document.getElementById('addBookModalSubtitle').textContent = `${mod.moduleCode} — ${mod.moduleName}`;
+  document.getElementById('addBookTitle').value = '';
+  document.getElementById('addBookAuthor').value = '';
+  document.getElementById('addBookEdition').value = '';
+  document.getElementById('addBookErr').classList.remove('show');
+  document.getElementById('addBookModal').classList.add('open');
+}
+
+function closeAddBookModal() {
+  document.getElementById('addBookModal').classList.remove('open');
+  activeAddBookModuleId = null;
+}
+
+function submitAddBook() {
+  const title = document.getElementById('addBookTitle').value.trim();
+  const author = document.getElementById('addBookAuthor').value.trim();
+  const edition = document.getElementById('addBookEdition').value.trim();
+  const err = document.getElementById('addBookErr');
+
+  if (!title) {
+    err.classList.add('show');
+    return;
+  }
+  err.classList.remove('show');
+
+  const mod = getModuleById(activeAddBookModuleId);
+  const newRequest = {
+    id: 'req-' + Date.now(),
+    moduleId: activeAddBookModuleId,
+    bookTitle: title,
+    author: author || '—',
+    edition: edition || '—',
+    isbn: null, // not yet in the admin catalogue — admin will tag/match this when costing or converting a vendor list
+    price: null,
+    projectedLicenses: null,
+    verifiedLicenses: null,
+    lastApprovedValue: null,
+    changeCount: 0,
+    status: 'not_submitted',
+    procurementOverride: null,
+    markupEnabled: true,
+    extraLicenses: 0,
+    history: []
+  };
+
+  DB.bookRequests.push(newRequest);
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'BookRequest', entityId: newRequest.id, actor: currentEmail, role: 'lecturer', action: `Added new book to ${mod.moduleCode}`, oldValue: null, newValue: title, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+  DB.notifications.unshift({ id: 'n-' + Date.now(), recipientRole: 'admin', message: `${user.name} added a new book "${title}" to ${mod.moduleCode}`, relatedId: newRequest.id, requiresAction: false, isRead: false, timestamp: nowISO() });
+
+  persist();
+  closeAddBookModal();
+  showToast(`"${title}" added. You can now submit a projected license count for it.`);
+  renderModules();
+}
+
+function openAddModuleModal() {
+  document.getElementById('addModuleModalSubtitle').textContent = `For ${user.school}, ${activeFY}`;
+  document.getElementById('addModuleCode').value = '';
+  document.getElementById('addModuleName').value = '';
+  document.getElementById('addModuleSemester').value = 'Sem 1';
+  document.getElementById('addModuleSchool').value = user.school;
+  document.getElementById('addModuleFY').value = activeFY;
+  document.getElementById('addModuleErr').classList.remove('show');
+  document.getElementById('addModuleModal').classList.add('open');
+}
+
+function closeAddModuleModal() {
+  document.getElementById('addModuleModal').classList.remove('open');
+}
+
+function submitAddModule() {
+  const code = document.getElementById('addModuleCode').value.trim();
+  const name = document.getElementById('addModuleName').value.trim();
+  const semester = document.getElementById('addModuleSemester').value;
+  const err = document.getElementById('addModuleErr');
+
+  if (!code || !name) {
+    err.classList.add('show');
+    return;
+  }
+
+  if (DB.modules.some(m => m.moduleCode.toLowerCase() === code.toLowerCase() && m.academicYear === activeFY)) {
+    err.textContent = `${code} already exists for ${activeFY}. Check your module list — it may already be there.`;
+    err.classList.add('show');
+    return;
+  }
+  err.classList.remove('show');
+
+  const newModule = {
+    id: 'mod-' + Date.now(),
+    moduleCode: code,
+    moduleName: name,
+    school: user.school,
+    semester,
+    academicYear: activeFY,
+    lecturerEmail: currentEmail,
+    isLegacy: false,
+    legacyNote: null,
+    legacyTaggedBy: null
+  };
+
+  DB.modules.push(newModule);
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'Module', entityId: newModule.id, actor: currentEmail, role: 'lecturer', action: `Added own module ${code} — ${name}`, oldValue: null, newValue: `${code} (${user.school}, ${semester}, ${activeFY})`, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+  DB.notifications.unshift({ id: 'n-' + Date.now(), recipientRole: 'admin', message: `${user.name} added a new module: ${code} — ${name} (${user.school}, ${activeFY})`, relatedId: newModule.id, requiresAction: false, isRead: false, timestamp: nowISO() });
+
+  persist();
+  closeAddModuleModal();
+  showToast(`${code} added to your modules for ${activeFY}.`);
+  renderModules();
+}
+
+function flagModuleLegacy(moduleId) {
+  const note = prompt('Why is this module being tagged as legacy? (e.g. replacement module code, reason it\'s being phased out)');
+  if (note === null) return; // cancelled
+  const mod = getModuleById(moduleId);
+  mod.isLegacy = true;
+  mod.legacyNote = note.trim() || 'Tagged legacy by lecturer (no note provided)';
+  mod.legacyTaggedBy = 'lecturer';
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'Module', entityId: moduleId, actor: currentEmail, role: 'lecturer', action: `Tagged module ${mod.moduleCode} as legacy`, oldValue: 'active', newValue: `legacy — ${mod.legacyNote}`, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+  DB.notifications.unshift({ id: 'n-' + Date.now(), recipientRole: 'admin', message: `${user.name} tagged ${mod.moduleCode} as legacy: "${mod.legacyNote}"`, relatedId: moduleId, requiresAction: false, isRead: false, timestamp: nowISO() });
+  persist();
+  showToast(`${mod.moduleCode} tagged as legacy. The admin has been notified.`);
+  renderModules();
+}
+
+function unflagModuleLegacy(moduleId) {
+  const mod = getModuleById(moduleId);
+  const oldNote = mod.legacyNote;
+  mod.isLegacy = false;
+  mod.legacyNote = null;
+  mod.legacyTaggedBy = null;
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'Module', entityId: moduleId, actor: currentEmail, role: 'lecturer', action: `Removed legacy tag from module ${mod.moduleCode}`, oldValue: `legacy — ${oldNote}`, newValue: 'active', requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+  persist();
+  showToast(`${mod.moduleCode} is no longer marked legacy.`);
+  renderModules();
+}
+
+function openEditModal(requestId, mode) {
+  activeRequestId = requestId;
+  const req = DB.bookRequests.find(r => r.id === requestId);
+  const mod = getModuleById(req.moduleId);
+  const titleEl = document.getElementById('editModalTitle');
+  const subtitleEl = document.getElementById('editModalSubtitle');
+  const warningEl = document.getElementById('editModalWarning');
+  const input = document.getElementById('editLicenseInput');
+  const submitBtn = document.getElementById('editModalSubmitBtn');
+
+  subtitleEl.textContent = `${mod.moduleCode} — ${req.bookTitle}`;
+  input.value = req.projectedLicenses || '';
+  document.getElementById('editNote').value = '';
+
+  if (mode === 'submit') {
+    titleEl.textContent = 'Submit projected licenses';
+    warningEl.style.display = 'none';
+    submitBtn.textContent = 'Submit';
+  } else if (mode === 'first') {
+    titleEl.textContent = 'Edit projected licenses';
+    warningEl.style.display = 'block';
+    warningEl.textContent = 'This is your first change. The admin will be notified automatically — no approval needed.';
+    submitBtn.textContent = 'Save change';
+  } else if (mode === 'final') {
+    titleEl.textContent = 'Edit projected licenses — final change';
+    warningEl.style.display = 'block';
+    warningEl.textContent = 'This is your second and final allowed change. It will be sent to the admin for approval, and your license count will show as "Pending approval" until they decide.';
+    submitBtn.textContent = 'Submit for approval';
+  }
+
+  document.getElementById('editModal').classList.add('open');
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('open');
+  activeRequestId = null;
+}
+
+function submitEditModal() {
+  const req = DB.bookRequests.find(r => r.id === activeRequestId);
+  const newVal = parseInt(document.getElementById('editLicenseInput').value, 10);
+
+  if (isNaN(newVal) || newVal < 0) {
+    showToast('Enter a valid number of licenses.');
+    return;
+  }
+
+  const oldVal = req.projectedLicenses;
+
+  if (req.status === 'not_submitted') {
+    req.projectedLicenses = newVal;
+    req.lastApprovedValue = newVal;
+    req.status = 'submitted';
+    req.history.push({ action: 'Original submission', value: newVal, actor: currentEmail, role: 'lecturer', timestamp: nowISO(), requiresApproval: false, approvalStatus: 'n/a' });
+    DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'BookRequest', entityId: req.id, actor: currentEmail, role: 'lecturer', action: 'Submitted projected licenses', oldValue: null, newValue: String(newVal), requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+    DB.notifications.unshift({ id: 'n-' + Date.now(), recipientRole: 'admin', message: `${user.name} submitted projected licenses for ${getModuleById(req.moduleId).moduleCode} — ${req.bookTitle}`, relatedId: req.id, requiresAction: false, isRead: false, timestamp: nowISO() });
+    showToast('Submitted. The admin has been notified.');
+  } else if (req.status === 'submitted') {
+    req.projectedLicenses = newVal;
+    req.lastApprovedValue = newVal;
+    req.changeCount = 1;
+    req.status = 'one_change_used';
+    req.history.push({ action: 'Change 1 (notified only)', value: newVal, actor: currentEmail, role: 'lecturer', timestamp: nowISO(), requiresApproval: false, approvalStatus: 'n/a' });
+    DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'BookRequest', entityId: req.id, actor: currentEmail, role: 'lecturer', action: 'Changed projected licenses (change 1 of 2)', oldValue: String(oldVal), newValue: String(newVal), requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+    DB.notifications.unshift({ id: 'n-' + Date.now(), recipientRole: 'admin', message: `${user.name} changed license count for ${getModuleById(req.moduleId).moduleCode} — ${req.bookTitle} (1st change, FYI only)`, relatedId: req.id, requiresAction: false, isRead: false, timestamp: nowISO() });
+    showToast('Change saved. This counted as your 1 free change — the admin was notified, no approval needed.');
+  } else if (req.status === 'one_change_used') {
+    req.changeCount = 2;
+    req.status = 'pending_approval';
+    req.history.push({ action: 'Change 2 (awaiting approval)', value: newVal, actor: currentEmail, role: 'lecturer', timestamp: nowISO(), requiresApproval: true, approvalStatus: 'pending' });
+    req._pendingValue = newVal;
+    DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'BookRequest', entityId: req.id, actor: currentEmail, role: 'lecturer', action: 'Changed projected licenses (change 2 of 2)', oldValue: String(oldVal), newValue: String(newVal), requiresApproval: true, approvalStatus: 'pending', timestamp: nowISO() });
+    DB.notifications.unshift({ id: 'n-' + Date.now(), recipientRole: 'admin', message: `${user.name} requested a 2nd change for ${getModuleById(req.moduleId).moduleCode} — ${req.bookTitle} (requires approval)`, relatedId: req.id, requiresAction: true, isRead: false, timestamp: nowISO() });
+    showToast('Submitted for approval. Your license count will show as pending until the admin reviews it.');
+  }
+
+  persist();
+  closeEditModal();
+  renderModules();
+}
+
+function openLogModal() {
+  const entries = DB.changeLog.filter(e => e.actor === currentEmail);
+  const body = document.getElementById('logModalBody');
+  if (entries.length === 0) {
+    body.innerHTML = `<div class="empty-state"><h3>No changes yet</h3><p>Your submissions and edits will appear here.</p></div>`;
+  } else {
+    body.innerHTML = entries.map(e => `
+      <div class="history-row">
+        <div>
+          <p>${e.action}</p>
+          <p class="small muted">${e.oldValue !== null ? e.oldValue + ' &rarr; ' : ''}${e.newValue} · ${fmtDate(e.timestamp)}</p>
+        </div>
+        ${e.requiresApproval ? `<span class="pill ${e.approvalStatus === 'pending' ? 'pill-warning' : e.approvalStatus === 'approved' ? 'pill-success' : 'pill-danger'}">${e.approvalStatus}</span>` : ''}
+      </div>
+    `).join('');
+  }
+  document.getElementById('logModal').classList.add('open');
+}
+
+function closeLogModal() {
+  document.getElementById('logModal').classList.remove('open');
+}
+
+function downloadSampleCSV() {
+  const csvContent = "Student Full Name (as per school record),Student Email\nWong Jia Hui,student01@sp.edu.sg\nMuhammad Faiz Bin Rahman,student02@sp.edu.sg\nPriya Nair,student03@sp.edu.sg\n";
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sample_verification_list.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Sample CSV downloaded.');
+}
+
+function showToast(msg) {
+  const stack = document.getElementById('toastStack');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  stack.appendChild(t);
+  setTimeout(() => t.remove(), 4200);
+}
+
+renderFYTabs();
+renderModules();
+</script>
+
+</body>
+</html>

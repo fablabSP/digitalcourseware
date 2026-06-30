@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Digital Courseware Platform — Lecturer Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css" />
+<style>
+  :root {
+    --accent: #1d7a4c;
+    --accent-soft: #d9efe2;
+    --accent-text: #1d7a4c;
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-banner">
+  <b>Demo mode.</b> Try these emails: <code>s.tan@sp.edu.sg</code> (active changes), <code>r.kumar@sp.edu.sg</code> (all verified), <code>m.ong@sp.edu.sg</code> (fresh), or any email not on the list to see the rejection state.
+</div>
+
+<div class="login-screen" style="min-height: calc(100vh - 36px);">
+  <div class="login-box">
+    <div class="login-icon">B</div>
+    <p class="small muted" style="text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; margin-bottom: 4px;">Digital Courseware Platform</p>
+    <h1 style="font-size: 19px; margin-bottom: 4px;">Lecturer Portal</h1>
+    <p class="soft small" style="margin-bottom: 22px;">Sign in with your sp.edu.sg email to view your modules and submit license requests.</p>
+
+    <label class="field-label" for="email">SP email</label>
+    <input type="email" id="email" placeholder="name@sp.edu.sg" autocomplete="email" />
+    <p class="field-error" id="err">This email isn't on the lecturer list. Check the address or contact the library admin.</p>
+
+    <button class="primary" style="width: 100%; margin-top: 14px; padding: 11px;" onclick="tryLogin()">Continue</button>
+
+    <p class="small muted" style="margin-top: 16px; line-height: 1.5;">
+      Access is restricted to emails registered on the academic year module list. If your email isn't recognised, your school's library admin needs to add you first.
+    </p>
+  </div>
+</div>
+
+<script src="../shared/data.js"></script>
+<script>
+function tryLogin() {
+  const email = document.getElementById('email').value.trim();
+  const err = document.getElementById('err');
+  const user = findUserByEmail(email);
+
+  if (!user || user.role !== 'lecturer') {
+    err.classList.add('show');
+    return;
+  }
+  if (!user.isActive) {
+    err.textContent = "This account has been deactivated. Contact the library admin.";
+    err.classList.add('show');
+    return;
+  }
+  err.classList.remove('show');
+  sessionStorage.setItem('currentLecturer', email);
+  window.location.href = 'dashboard.html';
+}
+
+document.getElementById('email').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') tryLogin();
+});
+</script>
+
+</body>
+</html>

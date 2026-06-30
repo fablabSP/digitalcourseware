@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Digital Courseware Platform — Admin Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css" />
+<style>
+  :root {
+    --accent: #2b3a67;
+    --accent-soft: #dfe3ef;
+    --accent-text: #2b3a67;
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-banner">
+  <b>Demo mode.</b> Try <code>kwok_pui_fong@sp.edu.sg</code> (Kwok Pui Fong) or <code>Jennifer_GAN@sp.edu.sg</code> (Jennifer Gan). Any other email will be rejected.
+</div>
+
+<div class="login-screen" style="min-height: calc(100vh - 36px);">
+  <div class="login-box">
+    <div class="login-icon">A</div>
+    <p class="small muted" style="text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; margin-bottom: 4px;">Digital Courseware Platform</p>
+    <h1 style="font-size: 19px; margin-bottom: 4px;">Admin Console</h1>
+    <p class="soft small" style="margin-bottom: 22px;">Sign in to manage lecturer requests, vendor lists, and platform access.</p>
+
+    <label class="field-label" for="email">SP work email</label>
+    <input type="email" id="email" placeholder="name@sp.edu.sg" autocomplete="email" />
+    <p class="field-error" id="err">This email isn't on the admin list.</p>
+
+    <button class="primary" style="width: 100%; margin-top: 14px; padding: 11px;" onclick="tryLogin()">Continue</button>
+
+    <p class="small muted" style="margin-top: 16px; line-height: 1.5;">
+      Admin access is restricted to a short list maintained internally. Contact your system owner to be added.
+    </p>
+  </div>
+</div>
+
+<script src="../shared/data.js"></script>
+<script>
+function tryLogin() {
+  const email = document.getElementById('email').value.trim();
+  const err = document.getElementById('err');
+  const user = findUserByEmail(email);
+
+  if (!user || user.role !== 'admin') {
+    err.classList.add('show');
+    return;
+  }
+  err.classList.remove('show');
+  sessionStorage.setItem('currentAdmin', email);
+  window.location.href = 'dashboard.html';
+}
+
+document.getElementById('email').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') tryLogin();
+});
+</script>
+
+</body>
+</html>

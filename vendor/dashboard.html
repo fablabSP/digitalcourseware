@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Digital Courseware Platform — Vendor Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css" />
+<style>
+  :root {
+    --accent: #9a5b00;
+    --accent-soft: #f5e4c8;
+    --accent-text: #9a5b00;
+  }
+  .upload-zone {
+    border: 2px dashed var(--line-strong);
+    border-radius: var(--radius-lg);
+    padding: 36px 20px;
+    text-align: center;
+    color: var(--ink-mute);
+    background: var(--surface-sunken);
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-banner">
+  <b>Demo mode — placeholder shell.</b> Upload and comparison logic is not yet built out.
+  <button class="ghost" style="font-size:11.5px; padding: 2px 8px; margin-left: 6px;" onclick="resetDemoData()">Reset demo data</button>
+</div>
+
+<div class="app-shell">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="brand-mark">V</div>
+      <div class="brand-text">
+        <div class="title">Digital Courseware Platform</div>
+        <div class="subtitle">Vendor Portal (placeholder)</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip">
+        <div class="avatar-circle" id="avatarInitials">V</div>
+        <span id="userName"></span>
+      </div>
+      <button class="ghost" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <h1 style="font-size: 21px; margin-bottom: 4px;">Your uploads</h1>
+    <p class="soft small" style="margin-bottom: 18px;">This is a placeholder for future build-out. The final version will let you upload a standard catalogue template and activation status list.</p>
+
+    <div class="card" style="margin-bottom: 20px;">
+      <h3 style="font-size: 15px; margin-bottom: 4px;">Book catalogue upload</h3>
+      <p class="small soft" style="margin-bottom: 14px;">Use the standard template so the admin's converter can map your columns correctly.</p>
+      <div class="upload-zone">
+        <p style="font-weight:600; color: var(--ink-soft); margin-bottom: 4px;">Drag a CSV here, or click to browse</p>
+        <p class="small">(not yet wired up in this demo)</p>
+      </div>
+      <button style="margin-top: 14px;" onclick="downloadTemplate()">Download standard template</button>
+    </div>
+
+    <div class="card" style="margin-bottom: 20px;">
+      <h3 style="font-size: 15px; margin-bottom: 4px;">Activation status upload</h3>
+      <p class="small soft" style="margin-bottom: 14px;">List of students who have activated their license. This will be compared against lecturer requests.</p>
+      <div class="upload-zone">
+        <p style="font-weight:600; color: var(--ink-soft); margin-bottom: 4px;">Drag a CSV here, or click to browse</p>
+        <p class="small">(not yet wired up in this demo)</p>
+      </div>
+    </div>
+
+    <h3 style="font-size: 15px; margin-bottom: 10px;">Your past uploads</h3>
+    <table class="data-table">
+      <thead><tr><th>File</th><th>Type</th><th>Uploaded</th><th>Status</th></tr></thead>
+      <tbody id="uploadsTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="../shared/data.js"></script>
+<script>
+const currentEmail = sessionStorage.getItem('currentVendor');
+if (!currentEmail) window.location.href = 'index.html';
+const user = findUserByEmail(currentEmail);
+
+function logout() {
+  sessionStorage.removeItem('currentVendor');
+  window.location.href = 'index.html';
+}
+
+function downloadTemplate() {
+  const csvContent = "Book Title,ISBN/SKU,Author,Edition,Unit Price (SGD),Module Code (if known)\nDesign Thinking 101,978-1-234567-01-1,A. Reyes,3rd,48.00,DM2031\n";
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'vendor_catalogue_template.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Standard template downloaded.');
+}
+
+function showToast(msg) {
+  const stack = document.getElementById('toastStack');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  stack.appendChild(t);
+  setTimeout(() => t.remove(), 4200);
+}
+
+document.getElementById('userName').textContent = user.name;
+document.getElementById('avatarInitials').textContent = user.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+
+const myLists = DB.vendorLists.filter(v => v.vendorId === DB.vendors.find(x => x.contactEmail === currentEmail)?.id);
+document.getElementById('uploadsTableBody').innerHTML = myLists.length ? myLists.map(v => `
+  <tr><td>${v.fileName}</td><td>${v.status === 'activation_upload' ? 'Activation status' : 'Catalogue'}</td><td>${fmtDateShort(v.uploadedAt)}</td><td><span class="pill ${v.status === 'converted' ? 'pill-success' : 'pill-neutral'}">${v.status.replace('_',' ')}</span></td></tr>
+`).join('') : `<tr><td colspan="4" class="muted" style="text-align:center; padding: 24px;">No uploads yet</td></tr>`;
+</script>
+
+</body>
+</html>

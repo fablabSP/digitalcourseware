@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Digital Courseware Platform — Admin Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="../shared/styles.css" />
+<style>
+  :root {
+    --accent: #2b3a67;
+    --accent-soft: #dfe3ef;
+    --accent-text: #2b3a67;
+  }
+  .map-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .map-row select { font-size: 13px; padding: 7px 10px; }
+  .arrow { color: var(--ink-mute); text-align: center; }
+  .fy-tab-row { display: flex; gap: 6px; margin-bottom: 16px; }
+  .fy-tab-btn { font-size: 13px; padding: 6px 14px; border-radius: 100px; border: 1px solid var(--line-strong); background: var(--surface); }
+  .fy-tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .editable-cell input { padding: 5px 8px; font-size: 13px; }
+  .lock-banner { font-size: 12px; color: var(--warning); background: var(--warning-bg); padding: 4px 10px; border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 5px; }
+  .sub-section-title { font-size: 14.5px; font-weight: 700; margin-bottom: 10px; margin-top: 4px; }
+  .upload-zone-mini { border: 2px dashed var(--line-strong); border-radius: var(--radius-md); padding: 18px; text-align: center; cursor: pointer; background: var(--surface-sunken); }
+  .upload-zone-mini:hover { border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="demo-banner">
+  <b>Demo mode</b> — all data is hardcoded and resets if you clear browser storage. <button class="ghost" style="font-size:11.5px; padding: 2px 8px; margin-left: 6px;" onclick="resetDemoData()">Reset demo data</button>
+</div>
+
+<div class="app-shell">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="brand-mark">A</div>
+      <div class="brand-text">
+        <div class="title">Digital Courseware Platform</div>
+        <div class="subtitle">Admin Console</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="ghost" onclick="openSettingsModal()">Settings</button>
+      <button class="ghost" onclick="openAccessModal()">Manage access</button>
+      <button class="ghost" onclick="openAdminUsersModal()">Manage admins</button>
+      <div class="user-chip">
+        <div class="avatar-circle" id="avatarInitials">A</div>
+        <span id="userName">Library Admin</span>
+      </div>
+      <button class="ghost" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="flex-between" style="margin-bottom: 6px;">
+      <h1 style="font-size: 21px;">Dashboard</h1>
+    </div>
+    <div class="fy-tab-row" id="fyTabRow"></div>
+
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="label">Pending approval</div>
+        <div class="value" id="metricPending">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Unread notifications</div>
+        <div class="value" id="metricUnread">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Modules this FY</div>
+        <div class="value" id="metricModules">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Vendor lists to convert</div>
+        <div class="value" id="metricVendorPending">0</div>
+      </div>
+    </div>
+
+    <div class="tab-row">
+      <button class="tab-btn active" id="tabBtn-requests" onclick="switchTab('requests')">Lecturer requests</button>
+      <button class="tab-btn" id="tabBtn-catalogue" onclick="switchTab('catalogue')">Book catalogue</button>
+      <button class="tab-btn" id="tabBtn-modules" onclick="switchTab('modules')">Modules</button>
+      <button class="tab-btn" id="tabBtn-vendors" onclick="switchTab('vendors')">Vendor list</button>
+      <button class="tab-btn" id="tabBtn-reconcile" onclick="switchTab('reconcile')">Activation check</button>
+      <button class="tab-btn" id="tabBtn-log" onclick="switchTab('log')">Activity log</button>
+    </div>
+
+    <!-- ===== TAB: REQUESTS ===== -->
+    <div id="tab-requests">
+      <div class="flex-between" style="margin-bottom: 12px;">
+        <p class="small soft">Book requests for the selected financial year.</p>
+        <div class="flex-row gap-8">
+          <button onclick="openCostingModal()"><span style="margin-right:5px;">&#931;</span>Costing &amp; submission</button>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Lecturer</th>
+            <th>Module</th>
+            <th>Book</th>
+            <th>Licenses</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="requestsTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- ===== TAB: CATALOGUE ===== -->
+    <div id="tab-catalogue" style="display:none;">
+      <div class="flex-between" style="margin-bottom: 12px;">
+        <p class="small soft">Title, ISBN/SKU, author, module, school and price for every book in the catalogue. Only one admin can edit a row at a time.</p>
+        <div class="flex-row gap-8">
+          <button onclick="openCatalogueCsvUploadModal()">+ Upload CSV</button>
+          <button onclick="openAddBookModal()">+ Add book</button>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>ISBN / SKU</th>
+            <th>Author</th>
+            <th>Module</th>
+            <th>School</th>
+            <th>Price</th>
+            <th style="width:160px;"></th>
+          </tr>
+        </thead>
+        <tbody id="catalogueTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- ===== TAB: MODULES ===== -->
+    <div id="tab-modules" style="display:none;">
+      <div class="flex-between" style="margin-bottom: 12px;">
+        <p class="small soft">All modules for the selected financial year. Tag a module as legacy when it's been replaced or removed.</p>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Module code</th>
+            <th>Module name</th>
+            <th>School</th>
+            <th>Semester</th>
+            <th>Lecturer</th>
+            <th>Status</th>
+            <th style="width:140px;"></th>
+          </tr>
+        </thead>
+        <tbody id="modulesTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- ===== TAB: VENDORS ===== -->
+    <div id="tab-vendors" style="display:none;">
+      <div class="flex-between" style="margin-bottom: 14px;">
+        <p class="small soft">Raw uploads from vendors (treated as publishers — each book belongs to exactly one vendor).</p>
+        <button onclick="openVendorCsvUploadModal()">+ Upload vendor CSV (fixed template)</button>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Vendor</th>
+            <th>File</th>
+            <th>Type</th>
+            <th>Uploaded</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="vendorsTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- ===== TAB: RECONCILE ===== -->
+    <div id="tab-reconcile" style="display:none;">
+      <p class="small soft" style="margin-bottom: 14px;">Every requested book for this financial year, with whether the lecturer and the vendor have each uploaded their list. Run a check once both sides are in to auto-match by student email.</p>
+
+      <table class="data-table" style="margin-bottom: 22px;">
+        <thead>
+          <tr>
+            <th>Book</th>
+            <th>Module</th>
+            <th>Lecturer uploaded?</th>
+            <th>Vendor uploaded?</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="reconcileBooksTableBody"></tbody>
+      </table>
+
+      <p class="sub-section-title">Report log</p>
+      <div id="reconcileReportsList"></div>
+    </div>
+
+    <!-- ===== TAB: LOG ===== -->
+    <div id="tab-log" style="display:none;">
+      <div class="flex-row gap-8" style="margin-bottom: 14px;">
+        <select id="logFilter" onchange="renderLog()" style="max-width: 220px;">
+          <option value="all">All roles</option>
+          <option value="lecturer">Lecturer actions</option>
+          <option value="admin">Admin actions</option>
+          <option value="vendor">Vendor actions</option>
+        </select>
+      </div>
+      <div id="logList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Approval modal ===== -->
+<div class="modal-backdrop" id="approvalModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <h2 style="font-size: 17px;">Approval required</h2>
+        <p class="small soft" id="approvalSubtitle" style="margin-top: 2px;"></p>
+      </div>
+      <button class="modal-close" onclick="closeApprovalModal()">&times;</button>
+    </div>
+    <div class="card-flat" style="margin-bottom: 14px;">
+      <table style="width:100%; font-size:13px;">
+        <tr><td class="muted" style="padding:4px 0;">Lecturer</td><td style="text-align:right; padding:4px 0;" id="appLecturer"></td></tr>
+        <tr><td class="muted" style="padding:4px 0;">Module</td><td style="text-align:right; padding:4px 0;" id="appModule"></td></tr>
+        <tr><td class="muted" style="padding:4px 0;">Book</td><td style="text-align:right; padding:4px 0;" id="appBook"></td></tr>
+      </table>
+    </div>
+    <p class="small soft" style="margin-bottom: 8px; font-weight:600;">Change history for this book</p>
+    <div id="appHistory" style="border:1px solid var(--line); border-radius: var(--radius-md); overflow:hidden; margin-bottom: 16px;"></div>
+    <label class="field-label">Note to lecturer (optional)</label>
+    <textarea id="approvalNote" rows="2" placeholder="Visible to the lecturer once you decide"></textarea>
+    <div class="flex-row gap-8" style="margin-top: 16px;">
+      <button class="success-btn" style="flex:1;" onclick="decideApproval(true)">Approve</button>
+      <button class="danger-btn" style="flex:1;" onclick="decideApproval(false)">Reject, revert</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Converter modal ===== -->
+<div class="modal-backdrop" id="converterModal">
+  <div class="modal-box" style="max-width: 600px;">
+    <div class="modal-header">
+      <h2 style="font-size: 17px;" id="converterTitle">Convert vendor list</h2>
+      <button class="modal-close" onclick="closeConverterModal()">&times;</button>
+    </div>
+    <p class="small soft" style="margin-bottom: 4px; font-weight:600;">Map vendor columns to library fields</p>
+    <div class="map-row"><div class="muted small">vendor column</div><div></div><div class="muted small">library field</div></div>
+    <div class="map-row"><select><option>book_title</option></select><div class="arrow">&rarr;</div><select><option>Title</option></select></div>
+    <div class="map-row"><select><option>isbn_code</option></select><div class="arrow">&rarr;</div><select><option>ISBN / SKU</option></select></div>
+    <div class="map-row"><select><option>auth_name</option></select><div class="arrow">&rarr;</div><select><option>Author</option></select></div>
+    <div class="map-row"><select><option>unit_price_sgd</option></select><div class="arrow">&rarr;</div><select><option>Price</option></select></div>
+
+    <div style="margin: 14px 0;">
+      <label class="field-label">Tag converted books to module</label>
+      <select id="converterModuleSelect"></select>
+    </div>
+
+    <div class="card-flat" style="margin-bottom: 16px;">
+      <p class="small" style="font-weight:600; margin-bottom: 8px;">Preview (first 2 rows)</p>
+      <table style="width:100%; font-size:12.5px;">
+        <tr class="muted"><th style="text-align:left; padding:3px;">Title</th><th style="text-align:left; padding:3px;">ISBN</th><th style="text-align:left; padding:3px;">Author</th><th style="text-align:left; padding:3px;">Price</th></tr>
+        <tr><td style="padding:3px;">Design Thinking 101</td><td style="padding:3px;">978-1-23</td><td style="padding:3px;">A. Reyes</td><td style="padding:3px;">$48.00</td></tr>
+        <tr><td style="padding:3px;">Materials Science Basics</td><td style="padding:3px;">978-4-56</td><td style="padding:3px;">K. Wong</td><td style="padding:3px;">$52.50</td></tr>
+      </table>
+    </div>
+    <button class="primary" style="width:100%;" onclick="runConversion()">Import into library list</button>
+  </div>
+</div>
+
+<!-- ===== Vendor CSV upload (fixed template) modal ===== -->
+<div class="modal-backdrop" id="vendorCsvUploadModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <h2 style="font-size: 17px;">Upload vendor CSV</h2>
+        <p class="small soft" style="margin-top: 2px;">Use the fixed CSV template — same columns every time, so no manual mapping is needed. Excel files must be saved as CSV first.</p>
+      </div>
+      <button class="modal-close" onclick="closeVendorCsvUploadModal()">&times;</button>
+    </div>
+
+    <label class="field-label">Vendor</label>
+    <select id="vendorCsvVendorSelect" style="margin-bottom: 14px;"></select>
+
+    <label class="field-label">File</label>
+    <div class="upload-zone-mini" onclick="document.getElementById('vendorCsvFileInput').click()">
+      <p style="font-weight:600; color: var(--ink-soft); margin-bottom: 2px;">Click to choose a file</p>
+      <p class="small muted" id="vendorCsvFileName">No file selected (.csv only — fixed template: Title, ISBN/SKU, Author, Module Code, School, Price)</p>
+    </div>
+    <input type="file" id="vendorCsvFileInput" accept=".csv" style="display:none;" onchange="onVendorCsvFileChosen(event)" />
+
+    <button class="primary" style="width:100%; margin-top:16px;" onclick="submitVendorCsvUpload()">Upload</button>
+    <p class="small muted" style="margin-top:10px;">This demo doesn't parse real spreadsheet contents — it records the upload and adds it to the vendor list tab, same as a CSV upload, ready to convert.</p>
+  </div>
+</div>
+
+<!-- ===== Catalogue CSV upload modal ===== -->
+<div class="modal-backdrop" id="catalogueCsvUploadModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <h2 style="font-size: 17px;">Upload books to catalogue (CSV)</h2>
+        <p class="small soft" style="margin-top: 2px;">For bulk-adding books directly, without going through a vendor list conversion. Same fixed columns: Title, ISBN/SKU, Author, Module Code, School, Price.</p>
+      </div>
+      <button class="modal-close" onclick="closeCatalogueCsvUploadModal()">&times;</button>
+    </div>
+
+    <label class="field-label">File</label>
+    <div class="upload-zone-mini" onclick="document.getElementById('catalogueCsvFileInput').click()">
+      <p style="font-weight:600; color: var(--ink-soft); margin-bottom: 2px;">Click to choose a file</p>
+      <p class="small muted" id="catalogueCsvFileName">No file selected (.csv only)</p>
+    </div>
+    <input type="file" id="catalogueCsvFileInput" accept=".csv" style="display:none;" onchange="onCatalogueCsvFileChosen(event)" />
+
+    <button class="primary" style="width:100%; margin-top:16px;" onclick="submitCatalogueCsvUpload()">Upload &amp; add to catalogue</button>
+    <p class="small muted" style="margin-top:10px;">This demo doesn't parse real spreadsheet contents — it simulates adding 2 sample books from the file to the catalogue for whichever FY tab is currently active, skipping any that already exist by ISBN/SKU, and logs the upload.</p>
+  </div>
+</div>
+
+<!-- ===== Add book modal ===== -->
+<div class="modal-backdrop" id="addBookModal">
+
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 style="font-size: 17px;">Add book to catalogue</h2>
+      <button class="modal-close" onclick="closeAddBookModal()">&times;</button>
+    </div>
+    <div class="stack">
+      <div><label class="field-label">Title</label><input type="text" id="newBookTitle" /></div>
+      <div><label class="field-label">ISBN / SKU</label><input type="text" id="newBookIsbn" /></div>
+      <div><label class="field-label">Author</label><input type="text" id="newBookAuthor" /></div>
+      <div><label class="field-label">Module</label><select id="newBookModule"></select></div>
+      <div><label class="field-label">School</label><select id="newBookSchool"></select></div>
+      <div><label class="field-label">Price (SGD)</label><input type="number" id="newBookPrice" step="0.01" min="0" /></div>
+    </div>
+    <button class="primary" style="width:100%; margin-top:16px;" onclick="addBook()">Add to catalogue</button>
+  </div>
+</div>
+
+<!-- ===== Reconciliation report detail modal ===== -->
+<div class="modal-backdrop" id="reconcileDetailModal">
+  <div class="modal-box" style="max-width: 640px;">
+    <div class="modal-header">
+      <div>
+        <h2 style="font-size: 17px;">Activation check report</h2>
+        <p class="small soft" id="reconcileDetailSubtitle" style="margin-top: 2px;"></p>
+      </div>
+      <button class="modal-close" onclick="closeReconcileDetailModal()">&times;</button>
+    </div>
+    <div id="reconcileDetailBody" style="max-height: 50vh; overflow-y: auto;"></div>
+  </div>
+</div>
+
+<!-- ===== Costing & submission modal ===== -->
+<div class="modal-backdrop" id="costingModal">
+  <div class="modal-box" style="max-width: 920px;">
+    <div class="modal-header">
+      <div>
+        <h2 style="font-size: 17px;">Costing &amp; submission</h2>
+        <p class="small soft" id="costingSubtitle" style="margin-top: 2px;"></p>
+      </div>
+      <button class="modal-close" onclick="closeCostingModal()">&times;</button>
+    </div>
+    <table class="data-table" style="margin-bottom: 14px;">
+      <thead><tr><th>Book</th><th>Module</th><th>Licenses</th><th>Original price</th><th>+5%?</th><th>Extra licenses</th><th>Final amount</th></tr></thead>
+      <tbody id="costingTableBody"></tbody>
+    </table>
+    <div class="flex-between" style="border-top: 1px solid var(--line); padding-top: 10px; margin-bottom: 18px;">
+      <p style="font-weight:700;">Total</p>
+      <p style="font-weight:700; font-size: 17px;" id="costingTotal">$0.00</p>
+    </div>
+    <div class="flex-row gap-8">
+      <button class="primary" style="flex:1;" onclick="copyCostingEmail()">Copy approval email</button>
+      <button style="flex:1;" onclick="downloadCostingPDF()">Download as PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Access management modal (lecturers / vendors) ===== -->
+<div class="modal-backdrop" id="accessModal">
+  <div class="modal-box" style="max-width: 620px;">
+    <div class="modal-header">
+      <h2 style="font-size: 17px;">Manage access</h2>
+      <button class="modal-close" onclick="closeAccessModal()">&times;</button>
+    </div>
+    <p class="small soft" style="margin-bottom: 14px;">Add or remove lecturers and vendors allowed to log in to this platform.</p>
+    <div class="flex-row gap-8" style="margin-bottom: 14px;">
+      <input type="email" id="newAccessEmail" placeholder="name@sp.edu.sg or vendor email" style="flex:2;" />
+      <select id="newAccessRole" style="flex:1;">
+        <option value="lecturer">Lecturer</option>
+        <option value="vendor">Vendor</option>
+      </select>
+      <button class="primary" onclick="addAccess()">Add</button>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
+      <tbody id="accessTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== Admin user management modal ===== -->
+<div class="modal-backdrop" id="adminUsersModal">
+  <div class="modal-box" style="max-width: 560px;">
+    <div class="modal-header">
+      <h2 style="font-size: 17px;">Manage admin users</h2>
+      <button class="modal-close" onclick="closeAdminUsersModal()">&times;</button>
+    </div>
+    <p class="small soft" style="margin-bottom: 14px;">Add or remove people with full admin access to this console.</p>
+    <div class="flex-row gap-8" style="margin-bottom: 14px;">
+      <input type="text" id="newAdminName" placeholder="Full name" style="flex:1;" />
+      <input type="email" id="newAdminEmail" placeholder="name@sp.edu.sg" style="flex:1;" />
+      <button class="primary" onclick="addAdmin()">Add</button>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>Name</th><th>Email</th><th>Status</th><th></th></tr></thead>
+      <tbody id="adminUsersTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== Settings modal ===== -->
+<div class="modal-backdrop" id="settingsModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 style="font-size: 17px;">Platform settings</h2>
+      <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+    </div>
+    <div class="stack">
+      <div><label class="field-label">Allowed changes before approval is required</label><input type="number" id="setMaxChanges" value="2" min="1" /></div>
+      <div><label class="field-label">Verification window (weeks after semester ends)</label><input type="number" id="setVerifyWeeks" value="3" min="1" /></div>
+      <div><label class="field-label">Current financial year (Apr–Apr)</label><input type="text" id="setFY" value="FY2026" /></div>
+    </div>
+    <button class="primary" style="width:100%; margin-top:18px;" onclick="saveSettings()">Save settings</button>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="../shared/data.js"></script>
+<script>
+const currentEmail = sessionStorage.getItem('currentAdmin');
+if (!currentEmail) window.location.href = 'index.html';
+const user = findUserByEmail(currentEmail);
+let activeRequestId = null;
+let activeVendorListId = null;
+let activeBookId = null;
+let activeFY = DB.settings.currentAcademicYear;
+
+function logout() {
+  sessionStorage.removeItem('currentAdmin');
+  window.location.href = 'index.html';
+}
+function initials(name) {
+  return name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
+}
+function switchTab(tab) {
+  ['requests', 'catalogue', 'modules', 'vendors', 'reconcile', 'log'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+    document.getElementById('tabBtn-' + t).classList.toggle('active', t === tab);
+  });
+  if (tab === 'log') renderLog();
+  if (tab === 'reconcile') renderReconcileTab();
+  if (tab === 'modules') renderModulesTable();
+}
+function statusInfo(status) {
+  switch (status) {
+    case 'not_submitted': return { label: 'Not submitted', cls: 'pill-danger' };
+    case 'submitted': return { label: 'Submitted', cls: 'pill-info' };
+    case 'one_change_used': return { label: '1 change used', cls: 'pill-info' };
+    case 'pending_approval': return { label: 'Approval needed', cls: 'pill-warning' };
+    case 'verified': return { label: 'Verified', cls: 'pill-success' };
+    case 'rejected': return { label: 'Last change rejected', cls: 'pill-danger' };
+    default: return { label: status, cls: 'pill-neutral' };
+  }
+}
+
+/* ---------- FY tabs ---------- */
+function renderFYTabs() {
+  const row = document.getElementById('fyTabRow');
+  row.innerHTML = FINANCIAL_YEARS.map(fy => `
+    <button class="fy-tab-btn ${fy === activeFY ? 'active' : ''}" onclick="switchFY('${fy}')">${fy}${fy === DB.settings.currentAcademicYear ? ' &middot; current' : ''}</button>
+  `).join('');
+}
+function switchFY(fy) {
+  activeFY = fy;
+  renderFYTabs();
+  renderAll();
+}
+
+/* ---------- requests tab ---------- */
+function renderRequestsTable() {
+  const tbody = document.getElementById('requestsTableBody');
+  tbody.innerHTML = '';
+  const requests = getBookRequestsForFY(activeFY);
+
+  if (requests.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="muted" style="text-align:center; padding:24px;">No requests in ${activeFY}</td></tr>`;
+    return;
+  }
+
+  requests.forEach(req => {
+    const mod = getModuleById(req.moduleId);
+    const lecturer = findUserByEmail(mod.lecturerEmail);
+    const info = statusInfo(req.status);
+    let licensesDisplay = req.status === 'pending_approval' ? '<span class="muted">Pending</span>' : (req.projectedLicenses !== null ? req.projectedLicenses : '<span class="muted">—</span>');
+    let actionBtn = req.status === 'pending_approval'
+      ? `<button class="primary" style="font-size:12px; padding:5px 10px;" onclick="openApprovalModal('${req.id}')">Review</button>`
+      : `<button class="ghost" style="font-size:12px; padding:5px 10px;" onclick="viewHistory('${req.id}')">View history</button>`;
+
+    const tr = document.createElement('tr');
+    tr.className = 'row-hover';
+    tr.innerHTML = `
+      <td>${lecturer ? lecturer.name : mod.lecturerEmail}</td>
+      <td>${mod.moduleCode}${mod.isLegacy ? ' <span class="pill pill-neutral" title="' + mod.legacyNote + '">Legacy</span>' : ''}</td>
+      <td>${req.bookTitle}</td>
+      <td>${licensesDisplay}</td>
+      <td><span class="pill ${info.cls}">${info.label}</span></td>
+      <td>${actionBtn}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function viewHistory(requestId) {
+  const req = DB.bookRequests.find(r => r.id === requestId);
+  const mod = getModuleById(req.moduleId);
+  if (req.history.length === 0) { showToast('No changes recorded yet for this book.'); return; }
+  const lines = req.history.map(h => `${h.action}: ${h.value} (${fmtDateShort(h.timestamp)})`).join('\n');
+  alert(`${mod.moduleCode} — ${req.bookTitle}\n\n${lines}`);
+}
+
+function openApprovalModal(requestId) {
+  activeRequestId = requestId;
+  const req = DB.bookRequests.find(r => r.id === requestId);
+  const mod = getModuleById(req.moduleId);
+  const lecturer = findUserByEmail(mod.lecturerEmail);
+
+  document.getElementById('approvalSubtitle').textContent = `${lecturer.name} is requesting a second change to ${mod.moduleCode}. This needs your sign off before it goes live.`;
+  document.getElementById('appLecturer').textContent = `${lecturer.name} (${lecturer.email})`;
+  document.getElementById('appModule').textContent = `${mod.moduleCode} — ${mod.moduleName}`;
+  document.getElementById('appBook').textContent = req.bookTitle;
+  document.getElementById('approvalNote').value = '';
+
+  document.getElementById('appHistory').innerHTML = req.history.map(h => {
+    const isPending = h.approvalStatus === 'pending';
+    return `<div class="history-row" style="${isPending ? 'background: var(--warning-bg);' : ''}">
+      <span class="${isPending ? '' : 'muted'}" style="${isPending ? 'color: var(--warning); font-weight:600;' : ''}">${h.action}</span>
+      <span style="font-weight:600; ${isPending ? 'color: var(--warning);' : ''}">${h.value} licenses</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('approvalModal').classList.add('open');
+}
+function closeApprovalModal() {
+  document.getElementById('approvalModal').classList.remove('open');
+  activeRequestId = null;
+}
+function decideApproval(approved) {
+  const req = DB.bookRequests.find(r => r.id === activeRequestId);
+  const mod = getModuleById(req.moduleId);
+  const pendingEntry = req.history[req.history.length - 1];
+
+  if (approved) {
+    req.projectedLicenses = pendingEntry.value;
+    req.lastApprovedValue = pendingEntry.value;
+    req.status = 'verified';
+    pendingEntry.approvalStatus = 'approved';
+    DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'BookRequest', entityId: req.id, actor: currentEmail, role: 'admin', action: `Approved 2nd change for ${mod.moduleCode} — ${req.bookTitle}`, oldValue: String(req.lastApprovedValue), newValue: String(pendingEntry.value), requiresApproval: false, approvalStatus: 'approved', timestamp: nowISO() });
+    showToast(`Approved. ${req.bookTitle} now shows ${pendingEntry.value} licenses.`);
+  } else {
+    const revertTo = req.history[req.history.length - 2] ? req.history[req.history.length - 2].value : req.lastApprovedValue;
+    req.projectedLicenses = revertTo;
+    req.lastApprovedValue = revertTo;
+    req.status = 'one_change_used';
+    pendingEntry.approvalStatus = 'rejected';
+    DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'BookRequest', entityId: req.id, actor: currentEmail, role: 'admin', action: `Rejected 2nd change for ${mod.moduleCode} — ${req.bookTitle}, reverted`, oldValue: String(pendingEntry.value), newValue: String(revertTo), requiresApproval: false, approvalStatus: 'rejected', timestamp: nowISO() });
+    showToast(`Rejected. Reverted to ${revertTo} licenses.`);
+  }
+  persist();
+  closeApprovalModal();
+  renderAll();
+}
+
+/* ---------- catalogue tab (lock/edit) ---------- */
+function renderCatalogueTable() {
+  const tbody = document.getElementById('catalogueTableBody');
+  const books = DB.libraryBooks.filter(b => b.academicYear === activeFY);
+  tbody.innerHTML = '';
+
+  if (books.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center; padding:24px;">No books in the catalogue for ${activeFY} yet</td></tr>`;
+    return;
+  }
+
+  books.forEach(b => {
+    const mod = getModuleById(b.moduleId);
+    const isEditingThis = b.lockedBy === currentEmail;
+    const isLockedByOther = b.lockedBy && b.lockedBy !== currentEmail;
+    const tr = document.createElement('tr');
+    tr.className = 'row-hover';
+
+    if (isEditingThis) {
+      tr.innerHTML = `
+        <td class="editable-cell"><input type="text" id="edit-title-${b.id}" value="${escapeHtml(b.title)}" /></td>
+        <td class="editable-cell"><input type="text" id="edit-isbn-${b.id}" value="${escapeHtml(b.isbn)}" /></td>
+        <td class="editable-cell"><input type="text" id="edit-author-${b.id}" value="${escapeHtml(b.author)}" /></td>
+        <td class="editable-cell"><select id="edit-module-${b.id}">${DB.modules.filter(m=>m.academicYear===activeFY).map(m => `<option value="${m.id}" ${m.id===b.moduleId?'selected':''}>${m.moduleCode}</option>`).join('')}</select></td>
+        <td class="editable-cell"><select id="edit-school-${b.id}">${SCHOOLS.map(s => `<option value="${s}" ${s===b.school?'selected':''}>${s}</option>`).join('')}</select></td>
+        <td class="editable-cell"><input type="number" step="0.01" id="edit-price-${b.id}" value="${b.price}" /></td>
+        <td>
+          <button class="success-btn" style="font-size:11.5px; padding:4px 8px;" onclick="saveBookEdit('${b.id}')">Save &amp; release</button>
+          <button class="ghost" style="font-size:11.5px; padding:4px 8px;" onclick="cancelBookEdit('${b.id}')">Cancel</button>
+        </td>`;
+    } else {
+      tr.innerHTML = `
+        <td>${b.title}</td>
+        <td class="small">${b.isbn}</td>
+        <td>${b.author}</td>
+        <td>${mod ? mod.moduleCode : '—'}</td>
+        <td>${b.school}</td>
+        <td>${fmtMoney(b.price)}</td>
+        <td>${isLockedByOther
+          ? `<span class="lock-banner">&#128274; ${findUserByEmail(b.lockedBy)?.name || b.lockedBy} editing</span>`
+          : `<button class="ghost" style="font-size:12px; padding:5px 10px;" onclick="lockBookForEdit('${b.id}')">Edit</button>`}
+        </td>`;
+    }
+    tbody.appendChild(tr);
+  });
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function lockBookForEdit(bookId) {
+  // platform-wide rule: only one admin can be editing any book at a time
+  const someoneElseEditing = DB.libraryBooks.find(b => b.lockedBy && b.lockedBy !== currentEmail);
+  if (someoneElseEditing) {
+    showToast(`${findUserByEmail(someoneElseEditing.lockedBy)?.name || someoneElseEditing.lockedBy} is currently editing "${someoneElseEditing.title}". Wait for them to finish.`);
+    return;
+  }
+  const b = DB.libraryBooks.find(x => x.id === bookId);
+  b.lockedBy = currentEmail;
+  persist();
+  renderCatalogueTable();
+}
+
+function cancelBookEdit(bookId) {
+  const b = DB.libraryBooks.find(x => x.id === bookId);
+  b.lockedBy = null;
+  persist();
+  renderCatalogueTable();
+}
+
+function saveBookEdit(bookId) {
+  const b = DB.libraryBooks.find(x => x.id === bookId);
+  const oldSnapshot = `${b.title} / ${b.isbn} / ${b.author} / ${b.school} / ${fmtMoney(b.price)}`;
+
+  b.title = document.getElementById(`edit-title-${bookId}`).value.trim();
+  b.isbn = document.getElementById(`edit-isbn-${bookId}`).value.trim();
+  b.author = document.getElementById(`edit-author-${bookId}`).value.trim();
+  b.moduleId = document.getElementById(`edit-module-${bookId}`).value;
+  b.school = document.getElementById(`edit-school-${bookId}`).value;
+  b.price = parseFloat(document.getElementById(`edit-price-${bookId}`).value) || 0;
+  b.lockedBy = null;
+  b.lastEditedBy = currentEmail;
+  b.lastEditedAt = nowISO();
+
+  const newSnapshot = `${b.title} / ${b.isbn} / ${b.author} / ${b.school} / ${fmtMoney(b.price)}`;
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'LibraryBook', entityId: b.id, actor: currentEmail, role: 'admin', action: `Edited catalogue entry — ${b.title}`, oldValue: oldSnapshot, newValue: newSnapshot, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+
+  persist();
+  showToast('Saved and released.');
+  renderAll();
+}
+
+function openAddBookModal() {
+  document.getElementById('newBookTitle').value = '';
+  document.getElementById('newBookIsbn').value = '';
+  document.getElementById('newBookAuthor').value = '';
+  document.getElementById('newBookPrice').value = '';
+  document.getElementById('newBookModule').innerHTML = DB.modules.filter(m => m.academicYear === activeFY).map(m => `<option value="${m.id}">${m.moduleCode} — ${m.moduleName}</option>`).join('');
+  document.getElementById('newBookSchool').innerHTML = SCHOOLS.map(s => `<option value="${s}">${s}</option>`).join('');
+  document.getElementById('addBookModal').classList.add('open');
+}
+function closeAddBookModal() {
+  document.getElementById('addBookModal').classList.remove('open');
+}
+function addBook() {
+  const title = document.getElementById('newBookTitle').value.trim();
+  const isbn = document.getElementById('newBookIsbn').value.trim();
+  if (!title || !isbn) { showToast('Title and ISBN/SKU are required.'); return; }
+
+  if (DB.libraryBooks.some(b => b.isbn === isbn)) {
+    showToast('A book with this ISBN/SKU already exists. Each book must be unique across all vendors.');
+    return;
+  }
+
+  const moduleId = document.getElementById('newBookModule').value;
+  const newBook = {
+    id: 'b-' + Date.now(),
+    vendorId: null,
+    moduleId,
+    school: document.getElementById('newBookSchool').value,
+    academicYear: activeFY,
+    isbn,
+    title,
+    author: document.getElementById('newBookAuthor').value.trim(),
+    price: parseFloat(document.getElementById('newBookPrice').value) || 0,
+    importedFrom: 'manual entry',
+    status: 'live',
+    lockedBy: null,
+    lastEditedBy: currentEmail,
+    lastEditedAt: nowISO()
+  };
+  DB.libraryBooks.push(newBook);
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'LibraryBook', entityId: newBook.id, actor: currentEmail, role: 'admin', action: `Added book to catalogue — ${title}`, oldValue: null, newValue: `${title} (${isbn})`, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+  persist();
+  closeAddBookModal();
+  showToast('Book added to catalogue.');
+  renderAll();
+}
+
+/* ---------- modules tab ---------- */
+function renderModulesTable() {
+  const tbody = document.getElementById('modulesTableBody');
+  const modules = getModulesForFY(activeFY);
+  if (modules.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center; padding:24px;">No modules in ${activeFY}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = modules.map(m => {
+    const lecturer = findUserByEmail(m.lecturerEmail);
+    const statusCell = m.isLegacy
+      ? `<span class="pill pill-neutral" title="${escapeHtml(m.legacyNote || '')}">Legacy${m.legacyTaggedBy ? ' (' + m.legacyTaggedBy + ')' : ''}</span>`
+      : `<span class="pill pill-success">Active</span>`;
+    const actionBtn = m.isLegacy
+      ? `<button class="ghost" style="font-size:12px; padding:5px 10px;" onclick="unflagLegacy('${m.id}')">Unflag</button>`
+      : `<button class="ghost" style="font-size:12px; padding:5px 10px;" onclick="openLegacyModal('${m.id}')">Tag legacy</button>`;
+    return `<tr class="row-hover">
+      <td>${m.moduleCode}</td>
+      <td>${m.moduleName}</td>
+      <td>${m.school}</td>
+      <td>${m.semester}</td>
+      <td>${lecturer ? lecturer.name : m.lecturerEmail}</td>
+      <td>${statusCell}</td>
+      <td>${actionBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function openLegacyModal(moduleId) {
+  const note = prompt('Why is this module being tagged as legacy? (e.g. replacement module code, reason for removal)');
+  if (note === null) return; // cancelled
+  const m = getModuleById(moduleId);
+  m.isLegacy = true;
+  m.legacyNote = note.trim() || 'Tagged legacy by admin (no note provided)';
+  m.legacyTaggedBy = 'admin';
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'Module', entityId: moduleId, actor: currentEmail, role: 'admin', action: `Tagged module ${m.moduleCode} as legacy`, oldValue: 'active', newValue: `legacy — ${m.legacyNote}`, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+  persist();
+  showToast(`${m.moduleCode} tagged as legacy. Existing requests on it remain visible, flagged.`);
+  renderModulesTable();
+  renderAll();
+}
+
+function unflagLegacy(moduleId) {
+  const m = getModuleById(moduleId);
+  const oldNote = m.legacyNote;
+  m.isLegacy = false;
+  m.legacyNote = null;
+  m.legacyTaggedBy = null;
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'Module', entityId: moduleId, actor: currentEmail, role: 'admin', action: `Removed legacy tag from module ${m.moduleCode}`, oldValue: `legacy — ${oldNote}`, newValue: 'active', requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+  persist();
+  showToast(`${m.moduleCode} is no longer marked legacy.`);
+  renderModulesTable();
+  renderAll();
+}
+
+/* ---------- vendors tab ---------- */
+function renderVendorsTable() {
+  const tbody = document.getElementById('vendorsTableBody');
+  tbody.innerHTML = '';
+  DB.vendorLists.forEach(vl => {
+    const typeLabel = vl.status === 'activation_upload' ? 'Activation status' : (vl.uploadedVia === 'fixed_csv_template' ? 'Book catalogue (CSV template)' : 'Book catalogue (CSV)');
+    let statusPill = '', actionBtn = '';
+    if (vl.status === 'not_converted') {
+      statusPill = `<span class="pill pill-warning">Not converted</span>`;
+      actionBtn = `<button class="primary" style="font-size:12px; padding:5px 10px;" onclick="openConverterModal('${vl.id}')">Convert</button>`;
+    } else if (vl.status === 'converted') {
+      statusPill = `<span class="pill pill-success">Converted</span>`;
+      actionBtn = `<button class="ghost" style="font-size:12px; padding:5px 10px;" disabled>Done</button>`;
+    } else if (vl.status === 'activation_upload') {
+      statusPill = `<span class="pill pill-info">Awaiting review</span>`;
+      actionBtn = `<button class="ghost" style="font-size:12px; padding:5px 10px;" onclick="switchTab('reconcile')">Go to activation check</button>`;
+    }
+    const tr = document.createElement('tr');
+    tr.className = 'row-hover';
+    tr.innerHTML = `<td>${vl.vendorName}</td><td>${vl.fileName}</td><td>${typeLabel}</td><td>${fmtDateShort(vl.uploadedAt)}</td><td>${statusPill}</td><td>${actionBtn}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+let pendingVendorCsvFile = null;
+function openVendorCsvUploadModal() {
+  document.getElementById('vendorCsvVendorSelect').innerHTML = DB.vendors.filter(v => v.isActive).map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+  document.getElementById('vendorCsvFileInput').value = '';
+  document.getElementById('vendorCsvFileName').textContent = 'No file selected (.csv only — fixed template: Title, ISBN/SKU, Author, Module Code, School, Price)';
+  pendingVendorCsvFile = null;
+  document.getElementById('vendorCsvUploadModal').classList.add('open');
+}
+function closeVendorCsvUploadModal() {
+  document.getElementById('vendorCsvUploadModal').classList.remove('open');
+}
+function onVendorCsvFileChosen(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    showToast('Only .csv files are accepted. Excel files (.xlsx, .xls) must be saved as CSV before uploading.');
+    event.target.value = '';
+    pendingVendorCsvFile = null;
+    document.getElementById('vendorCsvFileName').textContent = 'No file selected (.csv only — fixed template: Title, ISBN/SKU, Author, Module Code, School, Price)';
+    return;
+  }
+  pendingVendorCsvFile = file;
+  document.getElementById('vendorCsvFileName').textContent = file.name;
+}
+function submitVendorCsvUpload() {
+  const vendorId = document.getElementById('vendorCsvVendorSelect').value;
+  const vendor = DB.vendors.find(v => v.id === vendorId);
+  if (!vendor) { showToast('Select a vendor.'); return; }
+  if (!pendingVendorCsvFile) { showToast('Choose a file to upload.'); return; }
+
+  const newList = {
+    id: 'vl-' + Date.now(),
+    vendorId: vendor.id,
+    vendorName: vendor.name,
+    fileName: pendingVendorCsvFile.name,
+    uploadedAt: nowISO(),
+    status: 'not_converted',
+    rowCount: null,
+    uploadedVia: 'fixed_csv_template'
+  };
+  DB.vendorLists.unshift(newList);
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'VendorList', entityId: newList.id, actor: currentEmail, role: 'admin', action: `Uploaded vendor CSV on behalf of ${vendor.name}`, oldValue: null, newValue: `${pendingVendorCsvFile.name} (fixed template)`, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+
+  persist();
+  closeVendorCsvUploadModal();
+  showToast(`Uploaded. ${pendingVendorCsvFile.name} is ready to convert in the Vendor list tab.`);
+  renderAll();
+}
+
+/* ---------- catalogue CSV upload (direct, no vendor-list conversion step) ---------- */
+let pendingCatalogueCsvFile = null;
+function openCatalogueCsvUploadModal() {
+  document.getElementById('catalogueCsvFileInput').value = '';
+  document.getElementById('catalogueCsvFileName').textContent = 'No file selected (.csv only)';
+  pendingCatalogueCsvFile = null;
+  document.getElementById('catalogueCsvUploadModal').classList.add('open');
+}
+function closeCatalogueCsvUploadModal() {
+  document.getElementById('catalogueCsvUploadModal').classList.remove('open');
+}
+function onCatalogueCsvFileChosen(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    showToast('Only .csv files are accepted. Excel files (.xlsx, .xls) must be saved as CSV before uploading.');
+    event.target.value = '';
+    pendingCatalogueCsvFile = null;
+    document.getElementById('catalogueCsvFileName').textContent = 'No file selected (.csv only)';
+    return;
+  }
+  pendingCatalogueCsvFile = file;
+  document.getElementById('catalogueCsvFileName').textContent = file.name;
+}
+function submitCatalogueCsvUpload() {
+  if (!pendingCatalogueCsvFile) { showToast('Choose a file to upload.'); return; }
+
+  // demo stand-in for real CSV parsing: simulate two sample rows from the uploaded file
+  const sampleRows = [
+    { isbn: '978-1-csvdemo-01', title: 'Sample Uploaded Title A', author: 'Demo Author', price: 39.00, moduleId: DB.modules.find(m => m.academicYear === activeFY)?.id, school: DB.modules.find(m => m.academicYear === activeFY)?.school || SCHOOLS[0] },
+    { isbn: '978-1-csvdemo-02', title: 'Sample Uploaded Title B', author: 'Demo Author', price: 55.00, moduleId: DB.modules.find(m => m.academicYear === activeFY)?.id, school: DB.modules.find(m => m.academicYear === activeFY)?.school || SCHOOLS[0] }
+  ].filter(r => !DB.libraryBooks.some(b => b.isbn === r.isbn));
+
+  sampleRows.forEach(r => {
+    DB.libraryBooks.push({
+      id: 'b-' + Date.now() + Math.random().toString(36).slice(2, 6),
+      vendorId: null,
+      moduleId: r.moduleId,
+      school: r.school,
+      academicYear: activeFY,
+      isbn: r.isbn,
+      title: r.title,
+      author: r.author,
+      price: r.price,
+      importedFrom: pendingCatalogueCsvFile.name,
+      status: 'live',
+      lockedBy: null,
+      lastEditedBy: currentEmail,
+      lastEditedAt: nowISO()
+    });
+  });
+
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'LibraryBook', entityId: null, actor: currentEmail, role: 'admin', action: `Uploaded CSV directly to catalogue — ${pendingCatalogueCsvFile.name}`, oldValue: null, newValue: `${sampleRows.length} book(s) added to ${activeFY}`, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+
+  persist();
+  closeCatalogueCsvUploadModal();
+  showToast(sampleRows.length ? `Uploaded. ${sampleRows.length} book(s) added to the catalogue.` : 'Uploaded, but every title in this file already exists in the catalogue (matched by ISBN/SKU) — nothing new added.');
+  renderAll();
+}
+
+function openConverterModal(vendorListId) {
+  activeVendorListId = vendorListId;
+  const vl = DB.vendorLists.find(v => v.id === vendorListId);
+  document.getElementById('converterTitle').textContent = `Convert vendor list — ${vl.fileName}`;
+  document.getElementById('converterModuleSelect').innerHTML = DB.modules.filter(m => m.academicYear === activeFY).map(m => `<option value="${m.id}">${m.moduleCode} — ${m.moduleName}</option>`).join('');
+  document.getElementById('converterModal').classList.add('open');
+}
+function closeConverterModal() {
+  document.getElementById('converterModal').classList.remove('open');
+  activeVendorListId = null;
+}
+function runConversion() {
+  const vl = DB.vendorLists.find(v => v.id === activeVendorListId);
+  const moduleId = document.getElementById('converterModuleSelect').value;
+  const mod = getModuleById(moduleId);
+
+  vl.status = 'converted';
+  vl.convertedAt = nowISO();
+  vl.convertedBy = currentEmail;
+
+  const candidates = [
+    { isbn: '978-1-23-new1', title: 'Design Thinking 101', author: 'A. Reyes', price: 48.00 },
+    { isbn: '978-4-56-new2', title: 'Materials Science Basics', author: 'K. Wong', price: 52.50 }
+  ].filter(c => !DB.libraryBooks.some(b => b.isbn === c.isbn || b.title === c.title));
+
+  candidates.forEach(c => {
+    DB.libraryBooks.push({ id: 'b-' + Date.now() + Math.random().toString(36).slice(2,6), vendorId: vl.vendorId, moduleId, school: mod.school, academicYear: activeFY, isbn: c.isbn, title: c.title, author: c.author, price: c.price, importedFrom: vl.fileName, status: 'live', lockedBy: null, lastEditedBy: currentEmail, lastEditedAt: nowISO() });
+  });
+
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'VendorList', entityId: vl.id, actor: currentEmail, role: 'admin', action: 'Converted vendor list to library format', oldValue: `${vl.fileName} (raw)`, newValue: `${candidates.length} new book(s) imported, tagged to ${mod.moduleCode}`, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+
+  persist();
+  closeConverterModal();
+  showToast(candidates.length ? `Converted. ${candidates.length} book(s) imported.` : 'Converted. No new books — all titles already exist in the catalogue (each book is unique, one vendor each).');
+  renderAll();
+}
+
+/* ---------- reconciliation tab ---------- */
+function renderReconcileTab() {
+  const tbody = document.getElementById('reconcileBooksTableBody');
+  const requests = getBookRequestsForFY(activeFY);
+
+  if (requests.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="muted" style="text-align:center; padding:24px;">No book requests in ${activeFY}</td></tr>`;
+    renderReconcileReportsList();
+    return;
+  }
+
+  tbody.innerHTML = requests.map(req => {
+    const mod = getModuleById(req.moduleId);
+    const lecturerUploaded = lecturerHasUploadedFor(req.id);
+    const vendorUploaded = vendorHasUploadedFor(req.bookTitle);
+    const lecturerPill = lecturerUploaded ? `<span class="pill pill-success">Uploaded</span>` : `<span class="pill pill-neutral">Not yet</span>`;
+    const vendorPill = vendorUploaded ? `<span class="pill pill-success">Uploaded</span>` : `<span class="pill pill-neutral">Not yet</span>`;
+    const canRun = lecturerUploaded && vendorUploaded;
+    const actionBtn = canRun
+      ? `<button class="primary" style="font-size:12px; padding:5px 10px;" onclick="runReconciliation('${req.id}')">Run check</button>`
+      : `<button class="ghost" style="font-size:12px; padding:5px 10px;" disabled title="Both sides need to upload first">Run check</button>`;
+    return `<tr class="row-hover">
+      <td>${req.bookTitle}</td>
+      <td>${mod.moduleCode}</td>
+      <td>${lecturerPill}</td>
+      <td>${vendorPill}</td>
+      <td>${actionBtn}</td>
+    </tr>`;
+  }).join('');
+
+  renderReconcileReportsList();
+}
+
+function runReconciliation(bookRequestId) {
+  if (!bookRequestId) { showToast('No verification list available to check against.'); return; }
+
+  const req = DB.bookRequests.find(r => r.id === bookRequestId);
+  const vu = DB.verificationUploads.find(v => v.bookRequestId === bookRequestId);
+  const activations = DB.activationRecords.filter(a => a.bookTitle === req.bookTitle);
+
+  const details = [];
+  const lecturerEmails = new Set(vu.students.map(s => s.email));
+  const vendorEmails = new Set(activations.map(a => a.studentEmail));
+
+  vu.students.forEach(s => {
+    const act = activations.find(a => a.studentEmail === s.email);
+    details.push({
+      studentEmail: s.email, studentName: s.name, onLecturerList: true,
+      activatedByVendor: act ? act.activated : false,
+      status: act && act.activated ? 'matched' : 'not_activated'
+    });
+  });
+  activations.forEach(a => {
+    if (!lecturerEmails.has(a.studentEmail)) {
+      details.push({ studentEmail: a.studentEmail, studentName: a.studentName, onLecturerList: false, activatedByVendor: a.activated, status: 'not_on_lecturer_list' });
+    }
+  });
+
+  const matchedCount = details.filter(d => d.status === 'matched').length;
+  const notActivatedCount = details.filter(d => d.status === 'not_activated').length;
+  const notOnListCount = details.filter(d => d.status === 'not_on_lecturer_list').length;
+
+  const report = { id: 'rec-' + Date.now(), moduleId: req.moduleId, bookRequestId, generatedBy: currentEmail, generatedAt: nowISO(), matchedCount, notActivatedCount, notOnLecturerListCount: notOnListCount, details };
+  DB.reconciliationReports.unshift(report);
+
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'ReconciliationReport', entityId: report.id, actor: currentEmail, role: 'admin', action: `Ran activation reconciliation for ${getModuleById(req.moduleId).moduleCode} — ${req.bookTitle}`, oldValue: null, newValue: `${matchedCount} matched, ${notActivatedCount} not activated, ${notOnListCount} not on lecturer list`, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+
+  persist();
+  showToast(`Check complete: ${matchedCount} matched, ${notActivatedCount} not activated, ${notOnListCount} not on lecturer list.`);
+  renderReconcileReportsList();
+}
+
+function renderReconcileReportsList() {
+  const list = document.getElementById('reconcileReportsList');
+  if (DB.reconciliationReports.length === 0) {
+    list.innerHTML = `<div class="empty-state"><h3>No checks run yet</h3></div>`;
+    return;
+  }
+  list.innerHTML = DB.reconciliationReports.map(r => {
+    const req = DB.bookRequests.find(x => x.id === r.bookRequestId);
+    const mod = req ? getModuleById(req.moduleId) : null;
+    const generator = findUserByEmail(r.generatedBy);
+    return `
+      <div class="card-flat" style="margin-bottom: 10px;">
+        <div class="flex-between">
+          <div>
+            <p style="font-weight:600; font-size:13.5px;">${mod ? mod.moduleCode : '—'} — ${req ? req.bookTitle : 'Unknown'}</p>
+            <p class="small muted" style="margin-top:2px;">Run by ${generator ? generator.name : r.generatedBy} · ${fmtDate(r.generatedAt)}</p>
+          </div>
+          <div class="flex-row gap-8">
+            <span class="pill pill-success">${r.matchedCount} matched</span>
+            <span class="pill pill-warning">${r.notActivatedCount} not activated</span>
+            <span class="pill pill-danger">${r.notOnLecturerListCount} unlisted</span>
+            <button class="ghost" style="font-size:12px; padding:5px 10px;" onclick="openReconcileDetail('${r.id}')">Details</button>
+            <button class="danger-btn" style="font-size:12px; padding:5px 10px;" onclick="deleteReconciliationReport('${r.id}')">Delete</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function deleteReconciliationReport(reportId) {
+  const r = DB.reconciliationReports.find(x => x.id === reportId);
+  if (!r) return;
+  if (!confirm('Delete this activation check report? This cannot be undone.')) return;
+
+  const req = DB.bookRequests.find(x => x.id === r.bookRequestId);
+  const mod = req ? getModuleById(req.moduleId) : null;
+
+  DB.reconciliationReports = DB.reconciliationReports.filter(x => x.id !== reportId);
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'ReconciliationReport', entityId: reportId, actor: currentEmail, role: 'admin', action: `Deleted activation check report for ${mod ? mod.moduleCode : '—'} — ${req ? req.bookTitle : 'Unknown'}`, oldValue: `${r.matchedCount} matched, ${r.notActivatedCount} not activated, ${r.notOnLecturerListCount} unlisted`, newValue: null, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+
+  persist();
+  showToast('Report deleted.');
+  renderReconcileReportsList();
+}
+
+function openReconcileDetail(reportId) {
+  const r = DB.reconciliationReports.find(x => x.id === reportId);
+  const req = DB.bookRequests.find(x => x.id === r.bookRequestId);
+  const mod = req ? getModuleById(req.moduleId) : null;
+  document.getElementById('reconcileDetailSubtitle').textContent = `${mod ? mod.moduleCode : ''} — ${req ? req.bookTitle : ''} · ${fmtDate(r.generatedAt)}`;
+  document.getElementById('reconcileDetailBody').innerHTML = r.details.map(d => {
+    const cls = d.status === 'matched' ? 'pill-success' : d.status === 'not_activated' ? 'pill-warning' : 'pill-danger';
+    const label = d.status === 'matched' ? 'Matched' : d.status === 'not_activated' ? 'Not yet activated' : 'Not on lecturer list';
+    return `<div class="history-row"><div><p>${d.studentName}</p><p class="small muted">${d.studentEmail}</p></div><span class="pill ${cls}">${label}</span></div>`;
+  }).join('');
+  document.getElementById('reconcileDetailModal').classList.add('open');
+}
+function closeReconcileDetailModal() {
+  document.getElementById('reconcileDetailModal').classList.remove('open');
+}
+
+/* ---------- costing & submission ---------- */
+function openCostingModal() {
+  const requests = getBookRequestsForFY(activeFY).filter(r => r.projectedLicenses !== null && r.status !== 'pending_approval');
+  document.getElementById('costingSubtitle').textContent = `${activeFY} — requested books. Use the +5% checkbox for the standard markup on projected licenses, or untick it and enter extra licenses to cost at base price instead. Final amount can still be edited directly to override.`;
+
+  document.getElementById('costingTableBody').innerHTML = requests.length ? requests.map(r => {
+    const mod = getModuleById(r.moduleId);
+    const current = calcProcurementAmount(r);
+    return `<tr>
+      <td>${r.bookTitle}</td>
+      <td>${mod.moduleCode}</td>
+      <td>${r.projectedLicenses}</td>
+      <td class="small muted">${fmtMoney(r.price)}</td>
+      <td style="text-align:center;"><input type="checkbox" id="costing-markup-${r.id}" ${r.markupEnabled ? 'checked' : ''} onchange="toggleCostingMarkup('${r.id}')" /></td>
+      <td><input type="number" min="0" step="1" id="costing-extra-${r.id}" value="${r.extraLicenses || 0}" ${r.markupEnabled ? 'disabled' : ''} style="width:80px; font-size:13px; padding:5px 8px;" onchange="updateCostingExtraLicenses('${r.id}')" /></td>
+      <td><input type="number" step="0.01" id="costing-final-${r.id}" value="${current.toFixed(2)}" style="width:100px; font-size:13px; padding:5px 8px;" onchange="updateCostingOverride('${r.id}')" /></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="7" class="muted" style="text-align:center; padding:20px;">No confirmed requests yet for ${activeFY}</td></tr>`;
+
+  recalcCostingTotal();
+  document.getElementById('costingModal').classList.add('open');
+}
+function closeCostingModal() {
+  document.getElementById('costingModal').classList.remove('open');
+}
+
+// the +5% checkbox and the extra-licenses field are mutually exclusive per the agreed rule:
+// ticking +5% resets extra licenses to 0 and disables that field; entering extra licenses
+// (or unticking +5%) disables the markup and recalculates from base price + extra.
+function toggleCostingMarkup(reqId) {
+  const req = DB.bookRequests.find(r => r.id === reqId);
+  const checkbox = document.getElementById(`costing-markup-${reqId}`);
+  const extraInput = document.getElementById(`costing-extra-${reqId}`);
+
+  req.markupEnabled = checkbox.checked;
+  req.procurementOverride = null; // clear any manual override so the toggle takes effect
+
+  if (req.markupEnabled) {
+    req.extraLicenses = 0;
+    extraInput.value = 0;
+    extraInput.disabled = true;
+  } else {
+    extraInput.disabled = false;
+  }
+
+  const newAmount = calcProcurementAmount(req);
+  document.getElementById(`costing-final-${reqId}`).value = newAmount.toFixed(2);
+
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'BookRequest', entityId: reqId, actor: currentEmail, role: 'admin', action: `${req.markupEnabled ? 'Enabled' : 'Disabled'} +5% markup for ${req.bookTitle}`, oldValue: null, newValue: `${req.markupEnabled ? '+5% markup applied' : 'extra licenses mode'} — ${fmtMoney(newAmount)}`, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+  persist();
+  recalcCostingTotal();
+}
+
+function updateCostingExtraLicenses(reqId) {
+  const req = DB.bookRequests.find(r => r.id === reqId);
+  const input = document.getElementById(`costing-extra-${reqId}`);
+  const val = parseInt(input.value, 10);
+  req.extraLicenses = isNaN(val) || val < 0 ? 0 : val;
+  input.value = req.extraLicenses;
+  req.procurementOverride = null; // recalculate from the new extra-licenses value
+
+  const newAmount = calcProcurementAmount(req);
+  document.getElementById(`costing-final-${reqId}`).value = newAmount.toFixed(2);
+
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'BookRequest', entityId: reqId, actor: currentEmail, role: 'admin', action: `Set extra licenses for ${req.bookTitle}`, oldValue: null, newValue: `${req.extraLicenses} extra — ${fmtMoney(newAmount)}`, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+  persist();
+  recalcCostingTotal();
+}
+
+function updateCostingOverride(reqId) {
+  const input = document.getElementById(`costing-final-${reqId}`);
+  const val = parseFloat(input.value);
+  const req = DB.bookRequests.find(r => r.id === reqId);
+
+  // recompute what the "natural" amount would be (markup or extra-licenses mode) to see if this is a real override
+  const naturalAmount = req.markupEnabled
+    ? (req.price || 0) * (req.projectedLicenses || 0) * (1 + PROCUREMENT_MARKUP_PCT / 100)
+    : (req.price || 0) * ((req.projectedLicenses || 0) + (req.extraLicenses || 0));
+
+  if (!isNaN(val) && Math.abs(val - naturalAmount) > 0.01) {
+    req.procurementOverride = val;
+    DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'BookRequest', entityId: reqId, actor: currentEmail, role: 'admin', action: `Overrode procurement costing for ${req.bookTitle}`, oldValue: fmtMoney(naturalAmount), newValue: fmtMoney(val), requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+    persist();
+  } else if (!isNaN(val)) {
+    req.procurementOverride = null;
+    persist();
+  }
+  recalcCostingTotal();
+}
+function recalcCostingTotal() {
+  const rows = getCostingRows();
+  const total = rows.reduce((s, r) => s + r.amount, 0);
+  document.getElementById('costingTotal').textContent = fmtMoney(total);
+}
+
+function getCostingRows() {
+  return getBookRequestsForFY(activeFY).filter(r => r.projectedLicenses !== null && r.status !== 'pending_approval').map(r => {
+    const mod = getModuleById(r.moduleId);
+    const basis = r.procurementOverride !== null && r.procurementOverride !== undefined
+      ? 'override'
+      : (r.markupEnabled ? '+5%' : `+${r.extraLicenses || 0} extra`);
+    return { title: r.bookTitle, module: mod.moduleCode, licenses: r.projectedLicenses, price: r.price || 0, amount: calcProcurementAmount(r), basis };
+  });
+}
+
+function copyCostingEmail() {
+  const rows = getCostingRows();
+  const total = rows.reduce((s, r) => s + r.amount, 0);
+  const lines = rows.map(r => `- ${r.title} (${r.module}): ${r.licenses} licenses x ${fmtMoney(r.price)}, ${r.basis} = ${fmtMoney(r.amount)}`).join('\n');
+  const body =
+`Subject: E-book license purchase approval — ${activeFY}
+
+Hi,
+
+Requesting approval for the following e-book license purchases for ${activeFY}:
+
+${lines}
+
+Total: ${fmtMoney(total)}
+
+Please let me know if approved so we can proceed with the vendors.
+
+Thanks,
+${user.name}`;
+
+  navigator.clipboard.writeText(body).then(() => {
+    showToast('Approval email copied to clipboard.');
+  }).catch(() => {
+    showToast('Could not copy automatically — select and copy the text manually.');
+  });
+}
+
+function downloadCostingPDF() {
+  const rows = getCostingRows();
+  const total = rows.reduce((s, r) => s + r.amount, 0);
+
+  if (typeof window.jspdf === 'undefined') {
+    showToast('PDF library failed to load — check your network settings.');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(14);
+  doc.text(`E-book license costing — ${activeFY}`, 14, 18);
+  doc.setFontSize(10);
+  doc.text(`Generated by ${user.name} on ${fmtDateShort(nowISO())}`, 14, 25);
+
+  let y = 38;
+  doc.setFontSize(9);
+  doc.text('Book', 14, y); doc.text('Module', 80, y); doc.text('Licenses', 108, y); doc.text('Unit price', 132, y); doc.text('Basis', 158, y); doc.text('Final amt', 178, y);
+  y += 5;
+  doc.line(14, y, 196, y);
+  y += 6;
+  rows.forEach(r => {
+    doc.text(r.title.substring(0, 32), 14, y);
+    doc.text(r.module, 80, y);
+    doc.text(String(r.licenses), 108, y);
+    doc.text(fmtMoney(r.price), 132, y);
+    doc.text(r.basis, 158, y);
+    doc.text(fmtMoney(r.amount), 178, y);
+    y += 7;
+  });
+  y += 3;
+  doc.line(14, y, 196, y);
+  y += 8;
+  doc.setFontSize(11);
+  doc.text(`Total: ${fmtMoney(total)}`, 150, y);
+
+  doc.save(`booklist_costing_${activeFY}.pdf`);
+  showToast('PDF downloaded.');
+}
+
+/* ---------- activity log ---------- */
+function renderLog() {
+  const filter = document.getElementById('logFilter').value;
+  const entries = filter === 'all' ? DB.changeLog : DB.changeLog.filter(e => e.role === filter);
+  const list = document.getElementById('logList');
+  if (entries.length === 0) { list.innerHTML = `<div class="empty-state"><h3>No activity yet</h3></div>`; return; }
+  list.innerHTML = entries.map(e => {
+    const actorUser = findUserByEmail(e.actor);
+    const roleLabel = e.role.charAt(0).toUpperCase() + e.role.slice(1);
+    let approvalBadge = '';
+    if (e.requiresApproval) {
+      const cls = e.approvalStatus === 'pending' ? 'pill-warning' : e.approvalStatus === 'approved' ? 'pill-success' : 'pill-danger';
+      approvalBadge = `<span class="pill ${cls}">${e.approvalStatus}</span>`;
+    }
+    return `<div class="history-row"><div><p>${e.action} ${e.newValue ? '— <b>' + e.newValue + '</b>' : ''}</p><p class="small muted">${roleLabel}: ${actorUser ? actorUser.name : e.actor} · ${fmtDate(e.timestamp)}</p></div>${approvalBadge}</div>`;
+  }).join('');
+}
+
+/* ---------- access management (lecturers/vendors) ---------- */
+function openAccessModal() { renderAccessTable(); document.getElementById('accessModal').classList.add('open'); }
+function closeAccessModal() { document.getElementById('accessModal').classList.remove('open'); }
+function renderAccessTable() {
+  const tbody = document.getElementById('accessTableBody');
+  tbody.innerHTML = DB.userAccess.filter(u => u.role !== 'admin').map(u => `
+    <tr>
+      <td>${u.email}</td>
+      <td>${u.role.charAt(0).toUpperCase() + u.role.slice(1)}</td>
+      <td><span class="pill ${u.isActive ? 'pill-success' : 'pill-neutral'}">${u.isActive ? 'Active' : 'Inactive'}</span></td>
+      <td><button class="ghost" style="font-size:12px; padding:5px 10px;" onclick="toggleAccess('${u.email}')">${u.isActive ? 'Remove' : 'Restore'}</button></td>
+    </tr>`).join('');
+}
+function toggleAccess(email) {
+  const u = DB.userAccess.find(x => x.email === email);
+  u.isActive = !u.isActive;
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'UserAccess', entityId: email, actor: currentEmail, role: 'admin', action: u.isActive ? 'Restored access' : 'Removed access', oldValue: u.isActive ? 'inactive' : 'active', newValue: u.isActive ? 'active' : 'inactive', requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+  persist();
+  renderAccessTable();
+  showToast(`${email} ${u.isActive ? 'restored' : 'removed'}.`);
+}
+function addAccess() {
+  const email = document.getElementById('newAccessEmail').value.trim();
+  const role = document.getElementById('newAccessRole').value;
+  if (!email || !email.includes('@')) { showToast('Enter a valid email.'); return; }
+  if (findUserByEmail(email)) { showToast('This email is already on the list.'); return; }
+  DB.userAccess.push({ email, role, school: role === 'lecturer' ? 'Unassigned' : null, name: email.split('@')[0], isActive: true });
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'UserAccess', entityId: email, actor: currentEmail, role: 'admin', action: `Added ${role} access`, oldValue: null, newValue: email, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+  persist();
+  document.getElementById('newAccessEmail').value = '';
+  renderAccessTable();
+  showToast(`${email} added as ${role}.`);
+}
+
+/* ---------- admin user management ---------- */
+function openAdminUsersModal() { renderAdminUsersTable(); document.getElementById('adminUsersModal').classList.add('open'); }
+function closeAdminUsersModal() { document.getElementById('adminUsersModal').classList.remove('open'); }
+function renderAdminUsersTable() {
+  const tbody = document.getElementById('adminUsersTableBody');
+  tbody.innerHTML = DB.userAccess.filter(u => u.role === 'admin').map(u => `
+    <tr>
+      <td>${u.name}</td>
+      <td>${u.email}</td>
+      <td><span class="pill ${u.isActive ? 'pill-success' : 'pill-neutral'}">${u.isActive ? 'Active' : 'Inactive'}</span></td>
+      <td>${u.email === currentEmail ? '<span class="small muted">You</span>' : `<button class="ghost" style="font-size:12px; padding:5px 10px;" onclick="toggleAdmin('${u.email}')">${u.isActive ? 'Remove' : 'Restore'}</button>`}</td>
+    </tr>`).join('');
+}
+function toggleAdmin(email) {
+  const admins = DB.userAccess.filter(u => u.role === 'admin' && u.isActive);
+  const target = DB.userAccess.find(u => u.email === email);
+  if (target.isActive && admins.length <= 1) { showToast('At least one active admin must remain.'); return; }
+  target.isActive = !target.isActive;
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'UserAccess', entityId: email, actor: currentEmail, role: 'admin', action: target.isActive ? 'Restored admin access' : 'Removed admin access', oldValue: target.isActive ? 'inactive' : 'active', newValue: target.isActive ? 'active' : 'inactive', requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+  persist();
+  renderAdminUsersTable();
+  showToast(`${target.name} ${target.isActive ? 'restored' : 'removed'}.`);
+}
+function addAdmin() {
+  const name = document.getElementById('newAdminName').value.trim();
+  const email = document.getElementById('newAdminEmail').value.trim();
+  if (!name || !email.endsWith('@sp.edu.sg')) { showToast('Enter a name and a valid sp.edu.sg email.'); return; }
+  if (findUserByEmail(email)) { showToast('This email is already registered.'); return; }
+  DB.userAccess.push({ email, role: 'admin', school: null, name, isActive: true });
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'UserAccess', entityId: email, actor: currentEmail, role: 'admin', action: 'Added admin user', oldValue: null, newValue: `${name} (${email})`, requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+  persist();
+  document.getElementById('newAdminName').value = '';
+  document.getElementById('newAdminEmail').value = '';
+  renderAdminUsersTable();
+  showToast(`${name} added as admin.`);
+}
+
+/* ---------- settings ---------- */
+function openSettingsModal() {
+  document.getElementById('setMaxChanges').value = DB.settings.maxChangesAllowed;
+  document.getElementById('setVerifyWeeks').value = DB.settings.verificationWindowWeeks;
+  document.getElementById('setFY').value = DB.settings.currentAcademicYear;
+  document.getElementById('settingsModal').classList.add('open');
+}
+function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('open'); }
+function saveSettings() {
+  DB.settings.maxChangesAllowed = parseInt(document.getElementById('setMaxChanges').value, 10);
+  DB.settings.verificationWindowWeeks = parseInt(document.getElementById('setVerifyWeeks').value, 10);
+  DB.settings.currentAcademicYear = document.getElementById('setFY').value;
+  DB.changeLog.unshift({ id: 'cl-' + Date.now(), entityType: 'Settings', entityId: 'global', actor: currentEmail, role: 'admin', action: 'Updated platform settings', oldValue: null, newValue: JSON.stringify(DB.settings), requiresApproval: false, approvalStatus: 'n/a', timestamp: nowISO() });
+  persist();
+  closeSettingsModal();
+  renderFYTabs();
+  renderAll();
+  showToast('Settings saved.');
+}
+
+/* ---------- misc ---------- */
+function showToast(msg) {
+  const stack = document.getElementById('toastStack');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  stack.appendChild(t);
+  setTimeout(() => t.remove(), 4200);
+}
+
+function renderMetrics() {
+  const requests = getBookRequestsForFY(activeFY);
+  document.getElementById('metricPending').textContent = requests.filter(r => r.status === 'pending_approval').length;
+  document.getElementById('metricUnread').textContent = DB.notifications.filter(n => !n.isRead).length;
+  document.getElementById('metricModules').textContent = getModulesForFY(activeFY).length;
+  document.getElementById('metricVendorPending').textContent = DB.vendorLists.filter(v => v.status === 'not_converted').length;
+}
+
+function renderAll() {
+  document.getElementById('userName').textContent = user.name;
+  document.getElementById('avatarInitials').textContent = initials(user.name);
+  renderMetrics();
+  renderRequestsTable();
+  renderCatalogueTable();
+  renderVendorsTable();
+  // keep whichever tab is currently visible in sync with the active FY too
+  if (document.getElementById('tab-modules').style.display !== 'none') renderModulesTable();
+  if (document.getElementById('tab-reconcile').style.display !== 'none') renderReconcileTab();
+}
+
+renderFYTabs();
+renderAll();
+</script>
+
+</body>
+</html>
